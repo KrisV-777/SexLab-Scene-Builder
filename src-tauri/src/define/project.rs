@@ -372,10 +372,8 @@ impl Project {
                                 insert(&position.race);
                                 insert("Canine");
                             }
-                            //  => {
-                            //     insert("Boar");
-                            //     insert("Boar (Mounted)");
-                            // }
+                            "Chaurus" | "Chaurus Reaper" => insert("Chaurus"),
+                            "Spider" | "Large Spider" | "Giant Spider" => insert("Spider"),
                             "Boar" | "Boar (Mounted)" | "Boar (Any)" => insert("Boar (Any)"),
                             _ => insert(&position.race),
                         }

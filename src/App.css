@@ -8,6 +8,11 @@
   --bright-blue: #1677ff;
   --input-background: rgba(255, 255, 255, 0.2);
   --dark-toolbar: #f5f5f5;
+  --dark-background: rgb(0 33 64);
+  --dark-background-alt: rgb(27 61 93);
+  --dark-text: rgba(255, 255, 255, 0.65);
+  --dark-toolbar: #f5f5f5;
+  --placeholder: rgb(233, 184, 184);
 }
 
 body {
@@ -95,7 +100,7 @@ h5 {
 .main-sider {
   overflow: auto;
   /* 48px = Height of collide button on sider */
-  height: calc(100vh - 48px);
+  height: calc(100vh);
   left: 0;
   top: 0;
   bottom: 0;
@@ -180,4 +185,19 @@ h5 {
 
 .graph-furniture-selection {
   width: 256px;
+}
+
+.sidebar-form {
+  padding: 7px 11px;
+  font-size: 16px;
+  line-height: 1.5;
+  margin-top: 16px;
+  margin-left: 16px;
+  color: var(--white);
+  background-color: var(--input-background);
+  width: calc(100% - 36px);
+  border: none !important;
+}
+.sidebar-form:focus{
+  border: 2px solid white;
 }

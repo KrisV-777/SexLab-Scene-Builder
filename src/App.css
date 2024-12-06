@@ -201,3 +201,10 @@ h5 {
 .sidebar-form:focus{
   border: 2px solid white;
 }
+#sidebar-divider {
+  /* color: white; */
+  /* background: white; */
+  border: 0;
+  height: 2px;
+  background-image: linear-gradient(to right, transparent, #CCC, transparent);
+}

@@ -501,6 +501,7 @@ function App() {
             <div className="sider-content">
               <input type="text" placeholder="Package Name" className="sidebar-form" />
               <input type="text" placeholder="Author Name" className="sidebar-form" />
+              <Divider id="sidebar-divider"/>
               <Menu
                 theme="dark"
                 mode="inline"

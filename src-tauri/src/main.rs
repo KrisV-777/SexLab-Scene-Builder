@@ -220,7 +220,7 @@ fn main() {
                     let _ = open(&menu_handle.shell_scope(), "https://github.com/Scrabx3/SexLab/wiki/Scene-Builder", None);
                 }
                 "discord" => {
-                    let _ = open(&menu_handle.shell_scope(), "https://discord.gg/mycaxFPSeV", None);
+                    let _ = open(&menu_handle.shell_scope(), "https://discord.gg/JPSHb4ebqj", None);
                 }
                 "patreon" => {
                     let _ = open(&menu_handle.shell_scope(), "https://www.patreon.com/ScrabJoseline", None);

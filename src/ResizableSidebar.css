@@ -1,0 +1,49 @@
+.resize-handle {
+    width: 4px;
+    background-color: #f0f0f0;
+    cursor: col-resize;
+  }
+  
+  .resize-handle:hover {
+    background-color: #1677ff;
+  }
+  
+  .main-sider {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: auto;
+  }
+
+  .ant-layout-sider-children {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .sider-content {
+    flex: 1;
+    overflow-y: auto;
+  }
+  
+  .custom-trigger {
+    padding: 0 24px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: color 0.3s;
+    color: rgba(255, 255, 255, 0.65);
+    text-align: center;
+    line-height: 48px;
+  }
+  
+  .custom-trigger:hover {
+    color: rgb(255, 255, 255);
+  }
+  
+  .ant-layout-sider-trigger {
+    position: relative !important;
+  }
+
+  .custom-trigger:active {
+    background-color: #1677ff;
+    border-radius: 10px;
+  }

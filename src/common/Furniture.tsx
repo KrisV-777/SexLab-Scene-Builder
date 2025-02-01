@@ -21,8 +21,10 @@ export const Furnitures = [
       { label: "Cooking Pot", value: "CraftCookingPot" },
       { label: "Alchemy Table", value: "CraftAlchemy" },
       { label: "Enchanting Table", value: "CraftEnchanting" },
-      { label: "Forge", value: "CraftSmithing" },
+      { label: "Smithing Table", value: "CraftSmithing" },
+      { label: "Anvil", value: "CraftAnvil" },
       { label: "Workbench", value: "CraftWorkbench" },
+      { label: "Grindstone", value: "CraftGrindstone" },
     ],
   },
   {
@@ -35,11 +37,12 @@ export const Furnitures = [
   {
     label: 'Chairs',
     options: [
-      { label: "Common Chair", value: "Chair" },      // No arm, high back (Common Wooden chair)
-      { label: "Bar Chair", value: "ChairBar" },      // No Arm, no back
-      { label: "Arm Chair", value: "ChairArm" },      // Arm, low back
-      { label: "Wing Chair", value: "ChairWing" },    // Arm, high back
-      { label: "Noble Chair", value: "ChairNoble" },  // Noble Chair
+      { label: "Chair (No Armrest, High back)", value: "Chair" },
+      { label: "Common Chair", value: "ChairCommon" },
+      { label: "Wooden Chair", value: "ChairWood" },
+      { label: "Bar Chair", value: "ChairBar" },
+      { label: "Noble Chair", value: "ChairNoble" },
+      { label: "Chair (Other)", value: "ChairMisc" },
     ],
   },
   {
@@ -47,10 +50,11 @@ export const Furnitures = [
     options: [
       { label: "Common Bench", value: "Bench" },
       { label: "Noble Bench", value: "BenchNoble" },
+      { label: "Bench (Other)", value: "BenchMisc"}
     ],
   },
   {
-    label: 'Benches',
+    label: 'Thrones',
     options: [
       { label: "Throne", value: "Throne" },
       { label: "Riften Throne", value: "ThroneRiften" },

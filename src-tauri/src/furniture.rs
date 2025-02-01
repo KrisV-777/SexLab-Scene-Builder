@@ -1,75 +1,78 @@
 use bitflags::bitflags;
+use std::collections::HashMap;
 
-bitflags! {
-    #[derive(Default, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-    pub struct Furniture: u32 {
-        const None = 0;
+macro_rules! bitflags_with_strings {
+    ($name:ident: $type:ty { $($variant:ident = $value:expr),* $(,)? }) => {
+        bitflags! {
+            #[derive(Default, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+            pub struct $name: $type {
+                $(const $variant = $value;)*
+            }
+        }
 
-        const BedRoll = 1 << 0;
-        const BedSingle = 1 << 1;
-        const BedDouble = 1 << 2;
+        impl $name {
+            // pub fn to_str(self) -> Option<&'static str> {
+            //     match self {
+            //         $(Self::$variant => Some(stringify!($variant)),)*
+            //         _ => None,
+            //     }
+            // }
 
-        const Wall = 1 << 3;
-        const Railing = 1 << 4;
+            pub fn from_str(s: &str) -> Option<Self> {
+                let mapping: HashMap<&str, Self> = [
+                    $( (stringify!($variant), Self::$variant) ),*
+                ].iter().cloned().collect();
 
-        const CraftCookingPot = 1 << 5;
-        const CraftAlchemy = 1 << 6;
-        const CraftEnchanting = 1 << 7;
-        const CraftSmithing = 1 << 8;
-        const CraftWorkbench = 1 << 9;
+                mapping.get(s).copied()
+            }
+        }
+    };
+}
 
-        const Table = 1 << 10;
-        const TableCounter = 1 << 11;
+bitflags_with_strings! {
+    Furniture: u32 {
+        None = 0,
 
-        const Chair = 1 << 12;      // No arm; high back (Common Wooden chair)
-        const ChairBar = 1 << 13;   // No Arm; no back
-        const ChairArm = 1 << 14;   // Arm; low back
-        const ChairWing = 1 << 15;  // Arm; high back
-        const ChairNoble = 1 << 16; // Noble Chair
+        BedRoll = 1 << 0,
+        BedSingle = 1 << 1,
+        BedDouble = 1 << 2,
 
-        const Bench = 1 << 17;
-        const BenchNoble = 1 << 18;
+        Wall = 1 << 3,
+        Railing = 1 << 4,
 
-        const Throne = 1 << 19;
-        const ThroneRiften = 1 << 20;
-        const ThroneNordic = 1 << 21;
+        CraftCookingPot = 1 << 5,
+        CraftAlchemy = 1 << 6,
+        CraftEnchanting = 1 << 7,
+        CraftSmithing = 1 << 8,
+        CraftAnvil = 1 << 9,
+        CraftWorkbench = 1 << 10,
+        CraftGrindstone = 1 << 11,
 
-        const XCross = 1 << 22;
-        const Pillory = 1 << 23;
+        Table = 1 << 12,
+        TableCounter = 1 << 13,
+
+        Chair = 1 << 14,			// No arm, high back
+        ChairCommon = 1 << 15,	// Common chair
+        ChairWood = 1 << 16,		// Wooden Chair
+        ChairBar = 1 << 17,		// Bar stool
+        ChairNoble = 1 << 18,		// Noble Chair
+        ChairMisc = 1 << 19,		// Unspecified
+
+        Bench = 1 << 20,			// With back
+        BenchNoble = 1 << 21,		// Noble Bench (no back, with arm)
+        BenchMisc = 1 << 20,		// No specification on back or arm
+
+        Throne = 1 << 22,
+        ThroneRiften = 1 << 23,
+        ThroneNordic = 1 << 24,
+
+        XCross = 1 << 25,
+        Pillory = 1 << 26,
     }
 }
 
 pub fn as_furnitre(list: &Vec<String>) -> Furniture {
-    let mut ret = Furniture::default();
-    for furnistr in list {
-        match furnistr.as_str() {
-            "None" => return Furniture::default(),
-            "BedRoll" => ret |= Furniture::BedRoll,
-            "BedSingle" => ret |= Furniture::BedSingle,
-            "BedDouble" => ret |= Furniture::BedDouble,
-            "Wall" => ret |= Furniture::Wall,
-            "Railing" => ret |= Furniture::Railing,
-            "CraftCookingPot" => ret |= Furniture::CraftCookingPot,
-            "CraftAlchemy" => ret |= Furniture::CraftAlchemy,
-            "CraftEnchanting" => ret |= Furniture::CraftEnchanting,
-            "CraftSmithing" => ret |= Furniture::CraftSmithing,
-            "CraftWorkbench" => ret |= Furniture::CraftWorkbench,
-            "Table" => ret |= Furniture::Table,
-            "TableCounter" => ret |= Furniture::TableCounter,
-            "Chair" => ret |= Furniture::Chair,
-            "ChairBar" => ret |= Furniture::ChairBar,
-            "ChairArm" => ret |= Furniture::ChairArm,
-            "ChairWing" => ret |= Furniture::ChairWing,
-            "ChairNoble" => ret |= Furniture::ChairNoble,
-            "Bench" => ret |= Furniture::Bench,
-            "BenchNoble" => ret |= Furniture::BenchNoble,
-            "Throne" => ret |= Furniture::Throne,
-            "ThroneRiften" => ret |= Furniture::ThroneRiften,
-            "ThroneNordic" => ret |= Furniture::ThroneNordic,
-            "XCross" => ret |= Furniture::XCross,
-            "Pillory" => ret |= Furniture::Pillory,
-            _ => {}
-        }
-    }
-    ret
+    list.iter().fold(Furniture::None, |acc, s| {
+        acc | Furniture::from_str(s).unwrap_or(Furniture::None)
+    })
 }

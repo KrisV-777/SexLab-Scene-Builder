@@ -374,7 +374,7 @@ fn open_stage_editor_impl<R: Runtime>(app: &tauri::AppHandle<R>, payload: Editor
         width: 1024,
         height: 768,
     }));
-    let _ = window.set_resizable(false);
+    let _ = window.set_resizable(true);
     window.clone().once("on_request_data", move |_event| {
         window.emit("on_data_received", payload).unwrap();
     });

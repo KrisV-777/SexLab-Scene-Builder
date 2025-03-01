@@ -368,6 +368,7 @@ fn open_stage_editor_impl<R: Runtime>(app: &tauri::AppHandle<R>, payload: Editor
     } else {
         format!("Stage Editor [{}]", stage.name.as_str())
     })
+    .min_inner_size(800.0, 600.0)
     .build()
     .unwrap();
     let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {

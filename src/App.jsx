@@ -330,15 +330,30 @@ function App() {
     setEdited(false);
   }
 
-  const addStageToGraph = (stage, x = 40, y = 40) => {
+  let stageToGraphX = 40;
+  let stageToGraphY = 40;
+  const gridSize = 200;
+  
+  // Kind of works but it does not track state of the nodes so its really only useful for inital adding of stages.
+  // TODO: Fix this probably need to use state for this
+  const addStageToGraph = (stage) => {
+    const nodes = graph.getNodes();
+    if (nodes.length > 0) {
+      stageToGraphX += gridSize;
+      if (stageToGraphX > graph.container.clientWidth - gridSize) {
+        stageToGraphX = 40;
+        stageToGraphY += gridSize;
+      }
+    }
+    
     const node = graph.addNode({
       shape: 'stage_node',
       id: stage.id,
-      x,
-      y,
+      x: stageToGraphX,
+      y: stageToGraphY,
     });
     return node;
-  }
+  };
 
   const updateNodeProps = (stage, node, belongingScene) => {
     node.prop('stage', stage);

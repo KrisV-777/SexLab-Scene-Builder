@@ -4,8 +4,8 @@ import { invoke } from "@tauri-apps/api/tauri";
 import { listen } from "@tauri-apps/api/event";
 import ReactDOM from "react-dom/client";
 import { useImmer } from "use-immer";
-import { SaveOutlined } from '@ant-design/icons';
-import { Input, Button, Tag, Space, Tooltip, InputNumber, Card, Layout, Divider, Menu, Row, Col, Tabs, TreeSelect, notification } from 'antd';
+import { AlipaySquareFilled, SaveOutlined } from '@ant-design/icons';
+import { Input, Button, Tag, Space, Tooltip, InputNumber, Card, Layout, Divider, Menu, Row, Col, Tabs, TreeSelect, notification, Collapse } from 'antd';
 
 import { tagsSFW, tagsNSFW } from "./common/Tags"
 import PositionField from "./stage/PositionField";
@@ -190,86 +190,17 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
     setCustomTag('');
   }
 
-  return (
-    <Layout>
-      {contextHolder}
-      <Header className="stage-header">
-        <Row>
-          <Col>
-            <Input
-              id="stage-namefield-input"
-              className="stage-namefield"
-              size="large"
-              maxLength={30}
-              bordered={false}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              defaultValue={_name}
-              placeholder={'Stage Name'}
-              onFocus={(e) => e.target.select()}
-            />
-          </Col>
-          <Col flex={'auto'}>
-            <Menu
-              className="stage-header-menu"
-              theme="dark"
-              mode="horizontal"
-              selectable={false}
-              defaultSelectedKeys={['save']}
-              onClick={({ key }) => {
-                switch (key) {
-                  case 'save':
-                    saveAndReturn();
-                    break;
-                }
-              }}
-              items={[
-                { type: 'divider' },
-                {
-                  label: 'Save',
-                  key: 'save',
-                  icon: <SaveOutlined />,
-                  className: 'stage-header-menu-entry',
-                },
-              ]}
-            />
-          </Col>
-        </Row>
-      </Header>
-
-      <Divider orientation="left">Positions</Divider>
-      <Tabs
-        type="editable-card"
-        activeKey={activePosition}
-        hideAdd={positions.length > 4 || !!_control}
-        onEdit={onPositionTabEdit}
-        onChange={(e) => {
-          setActivePosition(e);
-        }}
-        items={positions.map((p, i) => {
-          return {
-            label: `Position ${i + 1}`,
-            closable: positions.length > 1 && !_control,
-            key: p.key,
-            children: (
-              <div className="position">
-                <PositionField
-                  _position={p.position}
-                  _control={(_control && _control.positions[i]) || null}
-                  ref={(element) => {
-                    positionRefs.current[i] = element;
-                  }}
-                />
-              </div>
-            ),
-          };
-        })}
-      />
-      <Divider orientation="left">Tags</Divider>
-      <TreeSelect
+  const positionsCollapsed = [
+    {
+      key: '1',
+      label: 'Tags',
+      children: 
+      <>
+        <TreeSelect
         className="tag-display-field"
         size="large"
         multiple
+        placeholder = "Please Select Tags"
         allowClear
         value={tags}
         onSelect={(e) => {
@@ -327,62 +258,153 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
           );
         }}
         treeData={tagTree}
-        treeExpandAction={'click'}
-      />
+        treeExpandAction={'click'}/>
+      </>
+    },{
+      key: '2',
+      label: 'Positions',
+      children:
+      <Tabs
+        type="editable-card"
+        activeKey={activePosition}
+        hideAdd={positions.length > 4 || !!_control}
+        onEdit={onPositionTabEdit}
+        onChange={(e) => {
+          setActivePosition(e);
+        }}
+        items={positions.map((p, i) => {
+          return {
+            label: `Position ${i + 1}`,
+            closable: positions.length > 1 && !_control,
+            key: p.key,
+            children: (
 
-      <Divider orientation="left">Extra</Divider>
-      <Space wrap align="start" style={{ padding: '16px' }}>
-        <Card
-          title={'Navigation'}
-          extra={
-            <Tooltip
-              title={
-                'A short text for the player to read when given the option to branch into this stage.'
+              <div className="position">
+                <PositionField
+                  _position={p.position}
+                  _control={(_control && _control.positions[i]) || null}
+                  ref={(element) => {
+                    positionRefs.current[i] = element;
+                  }}
+                />
+              </div>
+            ),
+          };
+        })}
+      />
+    },{
+      key: '3',
+      label: 'Extra',
+      children:
+      <>
+        <Row gutter={[2, 2]}>
+          <Col span={12}>
+            <Card
+              title={'Navigation'}
+              extra={
+                <Tooltip
+                  title={
+                    'A short text for the player to read when given the option to branch into this stage.'
+                  }
+                >
+                  <Button type="link">Info</Button>
+                </Tooltip>
               }
             >
-              <Button type="link">Info</Button>
-            </Tooltip>
-          }
-        >
-          <TextArea
-            className="extra-navinfo-textarea"
-            maxLength={100}
-            showCount
-            rows={3}
-            style={{ resize: 'none' }}
-            defaultValue={_extra.navText}
-            value={navText}
-            onChange={(e) => setNavText(e.target.value)}
-          ></TextArea>
-        </Card>
-        <Card
-          title={'Fixed Duration'}
-          extra={
-            <Tooltip
-              title={
-                'Duration of an animation that should only play once (does not loop).'
+              <TextArea
+                className="extra-navinfo-textarea"
+                maxLength={100}
+                showCount
+                rows={3}
+                style={{ resize: 'none' }}
+                defaultValue={_extra.navText}
+                value={navText}
+                onChange={(e) => setNavText(e.target.value)}
+              ></TextArea>
+            </Card>
+          </Col>
+          <Col span={12}>
+            <Card
+              title={'Fixed Duration'}
+              extra={
+                <Tooltip
+                  title={
+                    'Duration of an animation that should only play once (does not loop).'
+                  }
+                >
+                  <Button type="link">Info</Button>
+                </Tooltip>
               }
             >
-              <Button type="link">Info</Button>
-            </Tooltip>
-          }
-        >
-          <Space direction="vertical">
-            <InputNumber
-              className="extra-duration-input"
-              controls
-              precision={0}
-              step={10}
-              defaultValue={_extra.fixedLen}
-              min={0}
-              value={fixedLen ? fixedLen : undefined}
-              onChange={(e) => setFixedLen(e)}
-              placeholder="0"
-              addonAfter={'ms'}
+              <Space direction="vertical">
+                <InputNumber
+                  className="extra-duration-input"
+                  controls
+                  precision={0}
+                  step={10}
+                  defaultValue={_extra.fixedLen}
+                  min={0}
+                  value={fixedLen ? fixedLen : undefined}
+                  onChange={(e) => setFixedLen(e)}
+                  placeholder="0"
+                  addonAfter={'ms'}
+                />
+              </Space>
+            </Card>
+          </Col>
+        </Row>
+      </>
+
+    }
+  ]
+
+  return (
+    <Layout>
+      {contextHolder}
+      <Header className="stage-header">
+        <Row>
+          <Col>
+            <Input
+              id="stage-namefield-input"
+              className="stage-namefield"
+              size="large"
+              maxLength={30}
+              bordered={false}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              defaultValue={_name}
+              placeholder={'Stage Name'}
+              onFocus={(e) => e.target.select()}
             />
-          </Space>
-        </Card>
-      </Space>
+          </Col>
+          <Col flex={'auto'}>
+            <Menu
+              className="stage-header-menu"
+              theme="dark"
+              mode="horizontal"
+              selectable={false}
+              defaultSelectedKeys={['save']}
+              onClick={({ key }) => {
+                switch (key) {
+                  case 'save':
+                    saveAndReturn();
+                    break;
+                }
+              }}
+              items={[
+                { type: 'divider' },
+                {
+                  label: 'Save',
+                  key: 'save',
+                  icon: <SaveOutlined />,
+                  className: 'stage-header-menu-entry',
+                },
+              ]}
+            />
+          </Col>
+        </Row>
+      </Header>
+      <Collapse items={positionsCollapsed} defaultActiveKey={['1','2','3']} />;
     </Layout>
   );
 }

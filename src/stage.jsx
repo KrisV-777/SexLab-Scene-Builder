@@ -195,7 +195,7 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
       key: '1',
       label: 'Tags',
       children: 
-      <>
+      <div className="tag-display-box">
         <TreeSelect
         className="tag-display-field"
         size="large"
@@ -259,7 +259,7 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
         }}
         treeData={tagTree}
         treeExpandAction={'click'}/>
-      </>
+      </div>
     },{
       key: '2',
       label: 'Positions',

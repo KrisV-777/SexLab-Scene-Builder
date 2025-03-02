@@ -92,13 +92,16 @@ body {
 }
 
 /* Tag Field */
+.tag-display-box {
+  width: 100%;
+  padding: 25px;
+}
 
 .tag-display-field {
   /* border: 2px hsla(232, 18%, 16%, 0.1) solid; */
   /* border-radius: 16px; */
   background-color: #FFF;
   width: 100%;
-  padding: 24px;
   margin-top: 0px;
   /* padding: 18px; */
   /* min-height: 52px; */

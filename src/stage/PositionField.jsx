@@ -1,5 +1,5 @@
 import React, { useState, forwardRef, useImperativeHandle, useEffect } from "react";
-import { Button, Card, Checkbox, Col, Input, Row, Select, Space, Tooltip, InputNumber, Dropdown } from "antd";
+import { Button, Card, Checkbox, Col, Input, Row, Select, Space, Tooltip, InputNumber, Dropdown, ConfigProvider } from "antd";
 import { readTextFile, readDir } from "@tauri-apps/api/fs";
 import { resourceDir } from '@tauri-apps/api/path';
 import { invoke } from "@tauri-apps/api";
@@ -229,7 +229,7 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
               </Tooltip>
             }
           >
-            <Space size={'large'}>
+            <Space size={'large'} wrap={true}>
               <CheckboxEx
                 obj={sex}
                 label={'Male'}
@@ -266,6 +266,7 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
             }
           >
             <InputNumber
+              className="position-schlong-input"
               addonBefore={'S'}
               controls
               decimalSeparator=","
@@ -433,7 +434,7 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
           </Card>
         </Col>
         <Col span={12}>
-          {/* Offset */}
+          {/* q */}
           <Card
             className="position-attribute-card"
             title={'Offset'}

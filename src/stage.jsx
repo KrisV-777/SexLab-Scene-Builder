@@ -4,7 +4,7 @@ import { invoke } from "@tauri-apps/api/tauri";
 import { listen } from "@tauri-apps/api/event";
 import ReactDOM from "react-dom/client";
 import { useImmer } from "use-immer";
-import { AlipaySquareFilled, SaveOutlined } from '@ant-design/icons';
+import { AlipaySquareFilled, FileDoneOutlined, TagsOutlined , SaveOutlined, TeamOutlined } from '@ant-design/icons';
 import { Input, Button, Tag, Space, Tooltip, InputNumber, Card, Layout, Divider, Menu, Row, Col, Tabs, TreeSelect, notification, Collapse } from 'antd';
 
 import { tagsSFW, tagsNSFW } from "./common/Tags"
@@ -194,6 +194,7 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
     {
       key: '1',
       label: 'Tags',
+      extra: <TagsOutlined />,
       children: 
       <div className="tag-display-box">
         <TreeSelect
@@ -263,6 +264,7 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
     },{
       key: '2',
       label: 'Positions',
+      extra: <TeamOutlined />,
       children:
       <Tabs
         type="editable-card"
@@ -295,6 +297,7 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
     },{
       key: '3',
       label: 'Extra',
+      extra: <FileDoneOutlined />,
       children:
       <>
         <Row gutter={[2, 2]}>
@@ -406,7 +409,7 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
       </Header>
       <Collapse items={positionsCollapsed} defaultActiveKey={['1','2','3']} />;
     </Layout>
-  );
+  )
 }
 
 export default Editor;

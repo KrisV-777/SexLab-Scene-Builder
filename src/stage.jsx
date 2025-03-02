@@ -191,7 +191,7 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
   }
 
   const positionsCollapsed = [
-    {
+    { // Tags
       key: '1',
       label: 'Tags',
       extra: <TagsOutlined />,
@@ -261,7 +261,8 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
         treeData={tagTree}
         treeExpandAction={'click'}/>
       </div>
-    },{
+    },
+    { // Positions
       key: '2',
       label: 'Positions',
       extra: <TeamOutlined />,
@@ -294,7 +295,8 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
           };
         })}
       />
-    },{
+    },
+    { //Extra
       key: '3',
       label: 'Extra',
       extra: <FileDoneOutlined />,
@@ -303,6 +305,7 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
         <Row gutter={[2, 2]}>
           <Col span={12}>
             <Card
+              style={{ height: '100%' }}
               title={'Navigation'}
               extra={
                 <Tooltip
@@ -319,7 +322,7 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
                 maxLength={100}
                 showCount
                 rows={3}
-                style={{ resize: 'none' }}
+                style={{ resize: 'none', width: '100%' }}
                 defaultValue={_extra.navText}
                 value={navText}
                 onChange={(e) => setNavText(e.target.value)}
@@ -328,6 +331,7 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
           </Col>
           <Col span={12}>
             <Card
+              style={{ height: '100%' }}
               title={'Fixed Duration'}
               extra={
                 <Tooltip
@@ -339,7 +343,6 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
                 </Tooltip>
               }
             >
-              <Space direction="vertical">
                 <InputNumber
                   className="extra-duration-input"
                   controls
@@ -351,8 +354,8 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
                   onChange={(e) => setFixedLen(e)}
                   placeholder="0"
                   addonAfter={'ms'}
+                  style={{ width: '100%' }}
                 />
-              </Space>
             </Card>
           </Col>
         </Row>

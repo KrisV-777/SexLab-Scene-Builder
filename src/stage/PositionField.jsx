@@ -187,8 +187,7 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
   return (
     <div>
       <Row gutter={[2, 2]}>
-        <Col span={8}>
-          {/* Race */}
+        <Col span={8}> {/* Race */}
           <Card className="position-attribute-card" title={'Race'}>
             <Select
               className="position-race-select"
@@ -214,8 +213,7 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
             />
           </Card>
         </Col>
-        <Col span={9}>
-          {/* Sex */}
+        <Col span={9}> {/* Sex */}
           <Card
             className="position-attribute-card"
             title={'Sex'}
@@ -252,7 +250,7 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
             </Space>
           </Card>
         </Col>
-        <Col span={7}>
+        <Col span={7}> {/* Schlong */}
           <Card
             className="position-attribute-card"
             title={'Schlong'}
@@ -282,8 +280,7 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
             />
           </Card>
         </Col>
-        <Col span={24}>
-          {/* behavior file */}
+        <Col span={24}>  {/* Animation (Basic) */}
           <Card
             className="position-attribute-card"
             title={
@@ -337,8 +334,31 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
             )}
           </Card>
         </Col>
-        <Col span={12}>
-          {/* Data */}
+        <Col span={24}> {/* Anim Object */}
+          {/* behavior file */}
+          <Card
+            className="position-attribute-card"
+            title={'Anim Object'}
+            extra={
+              <Tooltip className="tool-tip"
+                title={
+                  'The anim object/s associated with this position. If multiple, separate with commas (,)'
+                }
+              >
+                <Button type="link">Info</Button>
+              </Tooltip>
+            }
+          >
+            <Input
+              value={anim_obj}
+              onChange={(e) => {
+                setAnimObj(e.target.value);
+              }}
+              placeholder="Editor ID"
+            />
+          </Card>
+        </Col>
+        <Col xs={12} lg={12} xl={6}> {/* Data */}
           <Card
             className="position-attribute-card"
             title={'Data'}
@@ -433,8 +453,7 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
             </Row>
           </Card>
         </Col>
-        <Col span={12}>
-          {/* q */}
+        <Col xs={12} lg={12} xl={6}> {/* Offset */}
           <Card
             className="position-attribute-card"
             title={'Offset'}
@@ -516,7 +535,7 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
             </Row>
           </Card>
         </Col>
-        <Col span={8}>
+        <Col xs={12} lg={12} xl={6}> {/* Scale */}
           <Card
             className="position-attribute-card"
             title={'Scale'}
@@ -546,7 +565,7 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
             />
           </Card>
         </Col>
-        <Col span={8}>
+        <Col xs={12} lg={12} xl={6}> {/* Stripping */}
           <Card
             className="position-attribute-card"
             title={'Stripping'}
@@ -605,30 +624,6 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
                   return prev;
                 });
               }}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          {/* behavior file */}
-          <Card
-            className="position-attribute-card"
-            title={'Anim Object'}
-            extra={
-              <Tooltip className="tool-tip"
-                title={
-                  'The anim object/s associated with this position. If multiple, separate with commas (,)'
-                }
-              >
-                <Button type="link">Info</Button>
-              </Tooltip>
-            }
-          >
-            <Input
-              value={anim_obj}
-              onChange={(e) => {
-                setAnimObj(e.target.value);
-              }}
-              placeholder="Editor ID"
             />
           </Card>
         </Col>

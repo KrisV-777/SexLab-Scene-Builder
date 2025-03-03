@@ -156,3 +156,6 @@ ul[overlayclassname="test12334"] {
     margin-top: 5px;
     align-items: flex-start;
 }
+.ant-col {
+  padding: 5px !important;
+}

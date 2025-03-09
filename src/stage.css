@@ -159,3 +159,10 @@ ul[overlayclassname="test12334"] {
 .ant-col {
   padding: 5px !important;
 }
+
+.ant-input-number-group-wrapper {
+  width: 100%;
+}
+.ant-collapse {
+  margin-top: 10px;
+}

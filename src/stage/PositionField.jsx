@@ -600,7 +600,7 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
                 },
               ]}
               maxTagTextLength={7}
-              maxTagCount={2}
+              maxTagCount={3}
               onSelect={(value) => {
                 if (StripOptions.indexOf(value) < 3) {
                   updateStrips([value]);

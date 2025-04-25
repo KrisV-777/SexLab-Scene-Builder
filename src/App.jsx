@@ -542,17 +542,11 @@ function App() {
         <PanelResizeHandle className="resize-handle" />
 
         <Panel>
-          <PanelGroup  direction="vertical">
-            <Panel 
-              defaultSize={50}
-              style={{
-
-              }}
-            >
+          <PanelGroup direction="vertical">
+            <Panel defaultSize={50} style={{}}>
               <PanelGroup direction="horizontal">
-
                 {/* Graph Area */}
-                <Panel id="graph-panel" >
+                <Panel id="graph-panel">
                   <Layout style={{ height: "100%" }}>
                     <Content>
                       {/* hacky workaround because graph doesnt render nodes if I put the graph interface into a child component zzz */}
@@ -564,7 +558,7 @@ function App() {
                         <Card
                           className="graph-editor-field a"
                           style={{
-                            height: "100%"
+                            height: "100%",
                           }}
                           title={
                             activeScene ? (
@@ -929,31 +923,34 @@ function App() {
                     </Space>
                   </Card>
                 </Panel>
-
               </PanelGroup>
             </Panel>
 
             <PanelResizeHandle className="resize-handle-horizontal" />
 
             {/* Bottom Positions Field */}
-            <Panel minSize={15} maxSize={50} id="Scene Positions">
-            <Card
-                    className="sceneTags-attribute-card"
-                    bordered={false}
-                    title={"Scene Tags"}
-                    extra={
-                      <Tooltip
-                        className="tool-tip"
-                        title={"To Do write a description of what this does"}
-                      >
-                        <Button type="link">Info</Button>
-                      </Tooltip>
-                    }
-                  >         tesatasdfgasdfg
-              </Card>     
+            <Panel minSize={15} maxSize={50} id="scenePositions">
+              <Card
+                className="sceneTagsPositions-card"
+                bordered={false}
+                title={"Scene Tags"}
+                extra={
+                  <Tooltip
+                    className="tool-tip"
+                    title={"To Do write a description of what Scene Tags do"}
+                  >
+                    <Button type="link">Info</Button>
+                  </Tooltip>
+                }
+              >
+                <Space direction="vertical" style={{ width: "100%" }}>
+                  <div style={{ height: "98%" }}>
+                    Add Tags Here
+                  </div>
+                </Space>
+              </Card>
             </Panel>
             {/* Bottom Positions Field */}
-            
           </PanelGroup>
         </Panel>
       </PanelGroup>

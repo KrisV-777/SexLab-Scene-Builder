@@ -112,6 +112,9 @@ h5 {
   padding-top: 6px;
   padding-bottom: 6px;
 }
+.scene-box .ant-card-body {
+  height: 92%;
+}
 
 .site-layout {
   height: 100vh;
@@ -211,4 +214,12 @@ h5 {
 
 #sceneTags-panel {
   padding: 10px;
+}
+
+#scenePositions .ant-card-body{
+  height: 100%;
+  overflow: auto;
+}
+.sceneTagsPositions-card {
+  height: 100%;
 }

@@ -504,11 +504,7 @@ function App() {
     <Layout hasSider>
       <PanelGroup direction="horizontal">
         {/* Left Panel */}
-        <Panel
-          minSize={10}
-          defaultSize={15}
-          id="left-panel"
-        >
+        <Panel minSize={10} defaultSize={15} id="left-panel">
           {contextHolder}
           <Sider
             className="main-sider"
@@ -546,10 +542,7 @@ function App() {
           hitAreaMargins={{ top: 10, bottom: 10 }}
         />
         {/* Graph Area */}
-        <Panel 
-          id="graph-panel"
-          minSize={50}
-        >
+        <Panel id="graph-panel" minSize={50}>
           <Layout>
             <Content>
               {/* hacky workaround because graph doesnt render nodes if I put the graph interface into a child component zzz */}
@@ -720,181 +713,174 @@ function App() {
           className="resize-handle"
           hitAreaMargins={{ top: 10, bottom: 10 }}
         />
-        <Panel
-          id="position-panel"
-          minSize={20}
-          defaultSize={20}
-        >
-          <Space size={"large"}>
-            <Space direction="vertical" size={"large"}>
-              <Card
-                className="position-attribute-card"
-                bordered={false}
-                title={"Positions"}
-                extra={
-                  <Tooltip
-                    className="tool-tip"
-                    title={"To Do write a description of what this does"}
-                  >
-                    <Button type="link">Info</Button>
-                  </Tooltip>
-                }
+        <Panel id="position-panel" minSize={20} defaultSize={20}>
+          <Card
+            className="position-attribute-card"
+            bordered={false}
+            title={"Positions"}
+            extra={
+              <Tooltip
+                className="tool-tip"
+                title={"To Do write a description of what this does"}
               >
-                <Select
-                  className="graph-furniture-selection"
-                  value={activeScene ? activeScene.furniture.furni_types : []}
-                  options={Furnitures}
-                  mode="multiple"
-                  onSelect={(value) => {
-                    if (value === "None") {
-                      updateActiveScene((prev) => {
-                        prev.furniture.furni_types = [value];
-                        return prev;
-                      });
-                    } else {
-                      updateActiveScene((prev) => {
-                        let where = prev.furniture.furni_types.indexOf("None");
-                        if (where === -1)
-                          prev.furniture.furni_types.push(value);
-                        else prev.furniture.furni_types[where] = value;
-                        prev.furniture.allow_bed = false;
-                        return prev;
-                      });
-                    }
-                    setEdited(true);
-                  }}
-                  onDeselect={(value) => {
+                <Button type="link">Info</Button>
+              </Tooltip>
+            }
+          >
+            <Space size={"large"} direction="vertical">
+              <Select
+                className="graph-furniture-selection"
+                value={activeScene ? activeScene.furniture.furni_types : []}
+                options={Furnitures}
+                mode="multiple"
+                onSelect={(value) => {
+                  if (value === "None") {
                     updateActiveScene((prev) => {
-                      prev.furniture.furni_types =
-                        prev.furniture.furni_types.filter((it) => it !== value);
-                      if (prev.furniture.furni_types.length === 0) {
-                        prev.furniture.furni_types = ["None"];
-                      }
+                      prev.furniture.furni_types = [value];
                       return prev;
                     });
-                    setEdited(true);
-                  }}
-                />
-                <Checkbox
-                  onChange={(e) => {
+                  } else {
                     updateActiveScene((prev) => {
-                      prev.furniture.allow_bed = e.target.checked;
+                      let where = prev.furniture.furni_types.indexOf("None");
+                      if (where === -1) prev.furniture.furni_types.push(value);
+                      else prev.furniture.furni_types[where] = value;
+                      prev.furniture.allow_bed = false;
+                      return prev;
                     });
-                    setEdited(true);
-                  }}
-                  checked={activeScene && activeScene.furniture.allow_bed}
-                  disabled={
-                    activeScene &&
-                    !activeScene.furniture.furni_types.includes("None")
                   }
-                >
-                  Allow Bed
-                </Checkbox>
-                <Checkbox
-                  onChange={(e) => {
-                    updateActiveScene((prev) => {
-                      prev.private = e.target.checked;
-                    });
-                    setEdited(true);
-                  }}
-                  checked={activeScene && activeScene.private}
-                >
-                  Private
-                </Checkbox>
-                <Row gutter={[12, 12]} justify={"space-evenly"}>
-                  <Col>
-                    <InputNumber
-                      addonBefore={"X"}
-                      controls
-                      decimalSeparator=","
-                      precision={1}
-                      step={0.1}
-                      value={
-                        activeScene
+                  setEdited(true);
+                }}
+                onDeselect={(value) => {
+                  updateActiveScene((prev) => {
+                    prev.furniture.furni_types =
+                      prev.furniture.furni_types.filter((it) => it !== value);
+                    if (prev.furniture.furni_types.length === 0) {
+                      prev.furniture.furni_types = ["None"];
+                    }
+                    return prev;
+                  });
+                  setEdited(true);
+                }}
+              />
+              <Checkbox
+                onChange={(e) => {
+                  updateActiveScene((prev) => {
+                    prev.furniture.allow_bed = e.target.checked;
+                  });
+                  setEdited(true);
+                }}
+                checked={activeScene && activeScene.furniture.allow_bed}
+                disabled={
+                  activeScene &&
+                  !activeScene.furniture.furni_types.includes("None")
+                }
+              >
+                Allow Bed
+              </Checkbox>
+              <Checkbox
+                onChange={(e) => {
+                  updateActiveScene((prev) => {
+                    prev.private = e.target.checked;
+                  });
+                  setEdited(true);
+                }}
+                checked={activeScene && activeScene.private}
+              >
+                Private
+              </Checkbox>
+              <Row gutter={[12, 12]} justify={"space-evenly"}>
+                <Col>
+                  <InputNumber
+                    addonBefore={"X"}
+                    controls
+                    decimalSeparator=","
+                    precision={1}
+                    step={0.1}
+                    value={
+                      activeScene
+                        ? activeScene.furniture.offset.x
                           ? activeScene.furniture.offset.x
-                            ? activeScene.furniture.offset.x
-                            : undefined
                           : undefined
-                      }
-                      onChange={(e) => {
-                        updateActiveScene((prev) => {
-                          prev.furniture.offset.x = e;
-                        });
-                        setEdited(true);
-                      }}
-                      placeholder="0.0"
-                    />
-                  </Col>
-                  <Col>
-                    <InputNumber
-                      addonBefore={"Y"}
-                      controls
-                      decimalSeparator=","
-                      precision={1}
-                      step={0.1}
-                      value={
-                        activeScene && activeScene.furniture.offset.y
-                          ? activeScene.furniture.offset.y
-                          : undefined
-                      }
-                      onChange={(e) => {
-                        updateActiveScene((prev) => {
-                          prev.furniture.offset.y = e;
-                        });
-                        setEdited(true);
-                      }}
-                      placeholder="0.0"
-                    />
-                  </Col>
-                  <Col>
-                    <InputNumber
-                      addonBefore={"Z"}
-                      controls
-                      decimalSeparator=","
-                      precision={1}
-                      step={0.1}
-                      value={
-                        activeScene
+                        : undefined
+                    }
+                    onChange={(e) => {
+                      updateActiveScene((prev) => {
+                        prev.furniture.offset.x = e;
+                      });
+                      setEdited(true);
+                    }}
+                    placeholder="0.0"
+                  />
+                </Col>
+                <Col>
+                  <InputNumber
+                    addonBefore={"Y"}
+                    controls
+                    decimalSeparator=","
+                    precision={1}
+                    step={0.1}
+                    value={
+                      activeScene && activeScene.furniture.offset.y
+                        ? activeScene.furniture.offset.y
+                        : undefined
+                    }
+                    onChange={(e) => {
+                      updateActiveScene((prev) => {
+                        prev.furniture.offset.y = e;
+                      });
+                      setEdited(true);
+                    }}
+                    placeholder="0.0"
+                  />
+                </Col>
+                <Col>
+                  <InputNumber
+                    addonBefore={"Z"}
+                    controls
+                    decimalSeparator=","
+                    precision={1}
+                    step={0.1}
+                    value={
+                      activeScene
+                        ? activeScene.furniture.offset.z
                           ? activeScene.furniture.offset.z
-                            ? activeScene.furniture.offset.z
-                            : undefined
                           : undefined
-                      }
-                      onChange={(e) => {
-                        updateActiveScene((prev) => {
-                          prev.furniture.offset.z = e;
-                        });
-                        setEdited(true);
-                      }}
-                      placeholder="0.0"
-                    />
-                  </Col>
-                  <Col>
-                    <InputNumber
-                      addonBefore={"°"}
-                      controls
-                      decimalSeparator=","
-                      precision={1}
-                      step={0.1}
-                      min={0.0}
-                      max={359.9}
-                      value={
-                        (activeScene && activeScene.furniture.offset.r) ||
-                        undefined
-                      }
-                      onChange={(e) => {
-                        updateActiveScene((prev) => {
-                          prev.furniture.offset.r = e;
-                        });
-                        setEdited(true);
-                      }}
-                      placeholder="0.0"
-                    />
-                  </Col>
-                </Row>
-              </Card>
+                        : undefined
+                    }
+                    onChange={(e) => {
+                      updateActiveScene((prev) => {
+                        prev.furniture.offset.z = e;
+                      });
+                      setEdited(true);
+                    }}
+                    placeholder="0.0"
+                  />
+                </Col>
+                <Col>
+                  <InputNumber
+                    addonBefore={"°"}
+                    controls
+                    decimalSeparator=","
+                    precision={1}
+                    step={0.1}
+                    min={0.0}
+                    max={359.9}
+                    value={
+                      (activeScene && activeScene.furniture.offset.r) ||
+                      undefined
+                    }
+                    onChange={(e) => {
+                      updateActiveScene((prev) => {
+                        prev.furniture.offset.r = e;
+                      });
+                      setEdited(true);
+                    }}
+                    placeholder="0.0"
+                  />
+                </Col>
+              </Row>
             </Space>
-          </Space>
+          </Card>
         </Panel>
       </PanelGroup>
     </Layout>

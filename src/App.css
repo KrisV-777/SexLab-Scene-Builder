@@ -210,7 +210,5 @@ h5 {
 }
 
 #position-panel {
-  /* border: red 1px solid;
-  border-left: red 5px solid;
-  margin-right: 5px; */
+  padding: 10px;
 }

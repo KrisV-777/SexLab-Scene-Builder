@@ -504,7 +504,11 @@ function App() {
     <Layout hasSider>
       <PanelGroup direction="horizontal">
         {/* Left Panel */}
-        <Panel defaultSize={20} minSize={20} maxSize={50} id="left-panel">
+        <Panel
+          minSize={10}
+          defaultSize={15}
+          id="left-panel"
+        >
           {contextHolder}
           <Sider
             className="main-sider"
@@ -542,7 +546,10 @@ function App() {
           hitAreaMargins={{ top: 10, bottom: 10 }}
         />
         {/* Graph Area */}
-        <Panel id="graph-panel">
+        <Panel 
+          id="graph-panel"
+          minSize={50}
+        >
           <Layout>
             <Content>
               {/* hacky workaround because graph doesnt render nodes if I put the graph interface into a child component zzz */}
@@ -713,12 +720,16 @@ function App() {
           className="resize-handle"
           hitAreaMargins={{ top: 10, bottom: 10 }}
         />
-        <Panel id="position-panel" defaultSize={3} minSize={30}>
-          <Space size={"large"} >
+        <Panel
+          id="position-panel"
+          minSize={20}
+          defaultSize={20}
+        >
+          <Space size={"large"}>
             <Space direction="vertical" size={"large"}>
               <Card
                 className="position-attribute-card"
-                variant="borderless"
+                bordered={false}
                 title={"Positions"}
                 extra={
                   <Tooltip

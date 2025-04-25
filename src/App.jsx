@@ -920,9 +920,9 @@ function App() {
               </PanelGroup>
             </Panel>
 
-            <PanelResizeHandle className="resize-handle" />
+            <PanelResizeHandle className="resize-handle-horizontal" />
 
-            <Panel> bottom </Panel>
+            <Panel minSize={15} maxSize={50}> bottom </Panel>
           </PanelGroup>
         </Panel>
       </PanelGroup>

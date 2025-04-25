@@ -5,8 +5,16 @@
     position: relative;
     cursor: col-resize;
   }
+  .resize-handle-horizontal {
+    width: 100%;
+    height: 4px;
+    background-color: #f0f0f0;
+    transition: background-color 0.2s;
+    position: relative;
+    cursor: row-resize;
+  }
   /* Fix to make the hover effect work properly on hover */
-  .resize-handle::after {
+  .resize-handle::after{
     content: "";
     position: absolute;
     top: 0;
@@ -20,9 +28,25 @@
     transform: translateX(-4px);
     z-index: 1;
   }
+  .resize-handle-horizontal::after{
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* Make the hit area larger than the visible handle */
+    width: 100%; /* Wider hit area */
+    height: 12px; /* Wider hit area */
+    /* Center the hit area */
+    transform: translateY(-4px);
+    z-index: 1;
+  }
   
   .resize-handle:hover,
-  .resize-handle:active {
+  .resize-handle:active,
+  .resize-handle-horizontal:hover,
+  .resize-handle-horizontal:active {
     background-color: #1677ff;
   }
   

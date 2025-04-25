@@ -504,7 +504,7 @@ function App() {
     <Layout hasSider>
       <PanelGroup direction="horizontal">
         {/* Left Panel */}
-        <Panel minSize={10} defaultSize={15} id="left-panel">
+        <Panel minSize={10} defaultSize={15} maxSize={50} id="left-panel">
           {contextHolder}
           <Sider
             className="main-sider"
@@ -537,350 +537,393 @@ function App() {
           </Sider>
         </Panel>
         {/* End Left Panel */}
-        <PanelResizeHandle
-          className="resize-handle"
-          hitAreaMargins={{ top: 10, bottom: 10 }}
-        />
-        {/* Graph Area */}
-        <Panel id="graph-panel" minSize={50}>
-          <Layout>
-            <Content>
-              {/* hacky workaround because graph doesnt render nodes if I put the graph interface into a child component zzz */}
-              {/* if (activeScene) ... */}
-              <div
-                className="scene-box"
-                style={{ display: !activeScene ? "none" : undefined }}
-              >
-                <Card
-                  className="graph-editor-field a"
-                  title={
-                    activeScene ? (
-                      <Space.Compact style={{ width: "98%" }}>
-                        <div style={edited < 1 ? { display: "none" } : {}}>
-                          <Tooltip title={"Unsaved changes"}>
-                            <DiffOutlined />
-                          </Tooltip>
-                        </div>
-                        <Input
-                          size="large"
-                          maxLength={30}
-                          bordered={false}
-                          id="stageNameInputField"
-                          value={activeScene.name}
-                          onChange={(e) => {
-                            updateActiveScene((prev) => {
-                              prev.name = e.target.value;
-                            });
-                            setEdited(true);
-                          }}
-                          onFocus={(e) => e.target.select()}
-                          placeholder="Scene Name"
-                        />
-                      </Space.Compact>
-                    ) : (
-                      <></>
-                    )
-                  }
-                  extra={
-                    <Space.Compact block>
-                      <Button
-                        onClick={() => {
-                          invoke("open_stage_editor", {
-                            control: activeScene.stages[0],
-                          });
-                        }}
+
+        <PanelResizeHandle className="resize-handle" />
+
+        <Panel>
+          <PanelGroup  direction="vertical">
+            <Panel defaultSize={50}>
+              <PanelGroup direction="horizontal">
+
+                {/* Graph Area */}
+                <Panel id="graph-panel" >
+                  <Layout>
+                    <Content>
+                      {/* hacky workaround because graph doesnt render nodes if I put the graph interface into a child component zzz */}
+                      {/* if (activeScene) ... */}
+                      <div
+                        className="scene-box"
+                        style={{ display: !activeScene ? "none" : undefined }}
                       >
-                        Add Stage
-                      </Button>
-                      <Button onClick={saveScene} type="primary">
-                        Store
-                      </Button>
-                    </Space.Compact>
-                  }
-                  // bodyStyle={{ height: 'calc(100% - 190px)' }}
+                        <Card
+                          className="graph-editor-field a"
+                          title={
+                            activeScene ? (
+                              <Space.Compact style={{ width: "98%" }}>
+                                <div
+                                  style={edited < 1 ? { display: "none" } : {}}
+                                >
+                                  <Tooltip title={"Unsaved changes"}>
+                                    <DiffOutlined />
+                                  </Tooltip>
+                                </div>
+                                <Input
+                                  size="large"
+                                  maxLength={30}
+                                  bordered={false}
+                                  id="stageNameInputField"
+                                  value={activeScene.name}
+                                  onChange={(e) => {
+                                    updateActiveScene((prev) => {
+                                      prev.name = e.target.value;
+                                    });
+                                    setEdited(true);
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  placeholder="Scene Name"
+                                />
+                              </Space.Compact>
+                            ) : (
+                              <></>
+                            )
+                          }
+                          extra={
+                            <Space.Compact block>
+                              <Button
+                                onClick={() => {
+                                  invoke("open_stage_editor", {
+                                    control: activeScene.stages[0],
+                                  });
+                                }}
+                              >
+                                Add Stage
+                              </Button>
+                              <Button onClick={saveScene} type="primary">
+                                Store
+                              </Button>
+                            </Space.Compact>
+                          }
+                          // bodyStyle={{ height: 'calc(100% - 190px)' }}
+                        >
+                          <div className="graph-toolbox">
+                            <Space
+                              className="graph-toolbox-content"
+                              size={"small"}
+                              align="center"
+                            >
+                              <Tooltip title="Undo" mouseEnterDelay={0.5}>
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<DoubleLeftOutlined />}
+                                  onClick={() => {
+                                    if (graph.canUndo()) graph.undo();
+                                  }}
+                                />
+                              </Tooltip>
+                              <Tooltip title="Redo" mouseEnterDelay={0.5}>
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<DoubleRightOutlined />}
+                                  onClick={() => {
+                                    if (graph.canRedo()) graph.redo();
+                                  }}
+                                />
+                              </Tooltip>
+                              <Divider type="vertical" />
+                              <Tooltip
+                                title="Center content"
+                                mouseEnterDelay={0.5}
+                              >
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<CompressOutlined />}
+                                  onClick={() => graph.centerContent()}
+                                />
+                              </Tooltip>
+                              <Tooltip
+                                title="Fit to screen"
+                                mouseEnterDelay={0.5}
+                              >
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<PicCenterOutlined />}
+                                  onClick={() => graph.zoomToFit()}
+                                />
+                              </Tooltip>
+                              <Tooltip
+                                title="Lock canvas"
+                                mouseEnterDelay={0.5}
+                              >
+                                <Switch
+                                  size="small"
+                                  checkedChildren={<PushpinOutlined />}
+                                  unCheckedChildren={<DragOutlined />}
+                                  onChange={(checked) => {
+                                    graph.togglePanning(!checked);
+                                  }}
+                                />
+                              </Tooltip>
+                              <Divider type="vertical" />
+                              <Tooltip title="Zoom out" mouseEnterDelay={0.5}>
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<ZoomOutOutlined />}
+                                  onClick={() => {
+                                    graph.zoomTo(
+                                      graph.zoom() * 0.8,
+                                      ZOOM_OPTIONS
+                                    );
+                                  }}
+                                />
+                              </Tooltip>
+                              <Tooltip title="Zoom in" mouseEnterDelay={0.5}>
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<ZoomInOutlined />}
+                                  onClick={() => {
+                                    graph.zoomTo(
+                                      graph.zoom() * 1.2,
+                                      ZOOM_OPTIONS
+                                    );
+                                  }}
+                                />
+                              </Tooltip>
+                              <Divider type="vertical" />
+                              <Tooltip
+                                title="Clear canvas"
+                                mouseEnterDelay={0.5}
+                              >
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  danger
+                                  icon={<DeleteOutlined />}
+                                  onClick={clearGraph}
+                                />
+                              </Tooltip>
+                            </Space>
+                          </div>
+                          <div className="graph-container">
+                            <div id="graph" ref={graphcontainer_ref} />
+                          </div>
+                        </Card>
+                      </div>
+                      {/* else ... */}
+                      <Empty
+                        style={activeScene ? { display: "none" } : {}}
+                        className="graph-no-scene-placeholder"
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        description={"No scene loaded :("}
+                      >
+                        <Button
+                          type="primary"
+                          onClick={() => onSiderSelect({ key: "add" })}
+                        >
+                          New Scene
+                        </Button>
+                      </Empty>
+                      {/* endif */}
+                    </Content>
+                  </Layout>
+                </Panel>
+                {/* End Graph Area */}
+
+                <PanelResizeHandle className="resize-handle" />
+
+                <Panel
+                  id="sceneTags-panel"
+                  minSize={30}
+                  defaultSize={30}
+                  maxSize={40}
                 >
-                  <div className="graph-toolbox">
-                    <Space
-                      className="graph-toolbox-content"
-                      size={"small"}
-                      align="center"
-                    >
-                      <Tooltip title="Undo" mouseEnterDelay={0.5}>
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<DoubleLeftOutlined />}
-                          onClick={() => {
-                            if (graph.canUndo()) graph.undo();
-                          }}
-                        />
+                  <Card
+                    className="sceneTags-attribute-card"
+                    bordered={false}
+                    title={"Scene Tags"}
+                    extra={
+                      <Tooltip
+                        className="tool-tip"
+                        title={"To Do write a description of what this does"}
+                      >
+                        <Button type="link">Info</Button>
                       </Tooltip>
-                      <Tooltip title="Redo" mouseEnterDelay={0.5}>
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<DoubleRightOutlined />}
-                          onClick={() => {
-                            if (graph.canRedo()) graph.redo();
-                          }}
-                        />
-                      </Tooltip>
-                      <Divider type="vertical" />
-                      <Tooltip title="Center content" mouseEnterDelay={0.5}>
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<CompressOutlined />}
-                          onClick={() => graph.centerContent()}
-                        />
-                      </Tooltip>
-                      <Tooltip title="Fit to screen" mouseEnterDelay={0.5}>
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<PicCenterOutlined />}
-                          onClick={() => graph.zoomToFit()}
-                        />
-                      </Tooltip>
-                      <Tooltip title="Lock canvas" mouseEnterDelay={0.5}>
-                        <Switch
-                          size="small"
-                          checkedChildren={<PushpinOutlined />}
-                          unCheckedChildren={<DragOutlined />}
-                          onChange={(checked) => {
-                            graph.togglePanning(!checked);
-                          }}
-                        />
-                      </Tooltip>
-                      <Divider type="vertical" />
-                      <Tooltip title="Zoom out" mouseEnterDelay={0.5}>
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<ZoomOutOutlined />}
-                          onClick={() => {
-                            graph.zoomTo(graph.zoom() * 0.8, ZOOM_OPTIONS);
-                          }}
-                        />
-                      </Tooltip>
-                      <Tooltip title="Zoom in" mouseEnterDelay={0.5}>
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<ZoomInOutlined />}
-                          onClick={() => {
-                            graph.zoomTo(graph.zoom() * 1.2, ZOOM_OPTIONS);
-                          }}
-                        />
-                      </Tooltip>
-                      <Divider type="vertical" />
-                      <Tooltip title="Clear canvas" mouseEnterDelay={0.5}>
-                        <Button
-                          type="text"
-                          size="small"
-                          danger
-                          icon={<DeleteOutlined />}
-                          onClick={clearGraph}
-                        />
-                      </Tooltip>
+                    }
+                  >
+                    <Space size={"large"} direction="vertical">
+                      <Select
+                        className="graph-furniture-selection"
+                        value={
+                          activeScene ? activeScene.furniture.furni_types : []
+                        }
+                        options={Furnitures}
+                        mode="multiple"
+                        onSelect={(value) => {
+                          if (value === "None") {
+                            updateActiveScene((prev) => {
+                              prev.furniture.furni_types = [value];
+                              return prev;
+                            });
+                          } else {
+                            updateActiveScene((prev) => {
+                              let where =
+                                prev.furniture.furni_types.indexOf("None");
+                              if (where === -1)
+                                prev.furniture.furni_types.push(value);
+                              else prev.furniture.furni_types[where] = value;
+                              prev.furniture.allow_bed = false;
+                              return prev;
+                            });
+                          }
+                          setEdited(true);
+                        }}
+                        onDeselect={(value) => {
+                          updateActiveScene((prev) => {
+                            prev.furniture.furni_types =
+                              prev.furniture.furni_types.filter(
+                                (it) => it !== value
+                              );
+                            if (prev.furniture.furni_types.length === 0) {
+                              prev.furniture.furni_types = ["None"];
+                            }
+                            return prev;
+                          });
+                          setEdited(true);
+                        }}
+                      />
+                      <Checkbox
+                        onChange={(e) => {
+                          updateActiveScene((prev) => {
+                            prev.furniture.allow_bed = e.target.checked;
+                          });
+                          setEdited(true);
+                        }}
+                        checked={activeScene && activeScene.furniture.allow_bed}
+                        disabled={
+                          activeScene &&
+                          !activeScene.furniture.furni_types.includes("None")
+                        }
+                      >
+                        Allow Bed
+                      </Checkbox>
+                      <Checkbox
+                        onChange={(e) => {
+                          updateActiveScene((prev) => {
+                            prev.private = e.target.checked;
+                          });
+                          setEdited(true);
+                        }}
+                        checked={activeScene && activeScene.private}
+                      >
+                        Private
+                      </Checkbox>
+                      <Row gutter={[12, 12]} justify={"space-evenly"}>
+                        <Col>
+                          <InputNumber
+                            addonBefore={"X"}
+                            controls
+                            decimalSeparator=","
+                            precision={1}
+                            step={0.1}
+                            value={
+                              activeScene
+                                ? activeScene.furniture.offset.x
+                                  ? activeScene.furniture.offset.x
+                                  : undefined
+                                : undefined
+                            }
+                            onChange={(e) => {
+                              updateActiveScene((prev) => {
+                                prev.furniture.offset.x = e;
+                              });
+                              setEdited(true);
+                            }}
+                            placeholder="0.0"
+                          />
+                        </Col>
+                        <Col>
+                          <InputNumber
+                            addonBefore={"Y"}
+                            controls
+                            decimalSeparator=","
+                            precision={1}
+                            step={0.1}
+                            value={
+                              activeScene && activeScene.furniture.offset.y
+                                ? activeScene.furniture.offset.y
+                                : undefined
+                            }
+                            onChange={(e) => {
+                              updateActiveScene((prev) => {
+                                prev.furniture.offset.y = e;
+                              });
+                              setEdited(true);
+                            }}
+                            placeholder="0.0"
+                          />
+                        </Col>
+                        <Col>
+                          <InputNumber
+                            addonBefore={"Z"}
+                            controls
+                            decimalSeparator=","
+                            precision={1}
+                            step={0.1}
+                            value={
+                              activeScene
+                                ? activeScene.furniture.offset.z
+                                  ? activeScene.furniture.offset.z
+                                  : undefined
+                                : undefined
+                            }
+                            onChange={(e) => {
+                              updateActiveScene((prev) => {
+                                prev.furniture.offset.z = e;
+                              });
+                              setEdited(true);
+                            }}
+                            placeholder="0.0"
+                          />
+                        </Col>
+                        <Col>
+                          <InputNumber
+                            addonBefore={"°"}
+                            controls
+                            decimalSeparator=","
+                            precision={1}
+                            step={0.1}
+                            min={0.0}
+                            max={359.9}
+                            value={
+                              (activeScene && activeScene.furniture.offset.r) ||
+                              undefined
+                            }
+                            onChange={(e) => {
+                              updateActiveScene((prev) => {
+                                prev.furniture.offset.r = e;
+                              });
+                              setEdited(true);
+                            }}
+                            placeholder="0.0"
+                          />
+                        </Col>
+                      </Row>
                     </Space>
-                  </div>
-                  <div className="graph-container">
-                    <div id="graph" ref={graphcontainer_ref} />
-                  </div>
-                </Card>
-              </div>
-              {/* else ... */}
-              <Empty
-                style={activeScene ? { display: "none" } : {}}
-                className="graph-no-scene-placeholder"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description={"No scene loaded :("}
-              >
-                <Button
-                  type="primary"
-                  onClick={() => onSiderSelect({ key: "add" })}
-                >
-                  New Scene
-                </Button>
-              </Empty>
-              {/* endif */}
-            </Content>
-          </Layout>
-        </Panel>
-        {/* End Graph Area */}
-        <PanelResizeHandle
-          className="resize-handle"
-          hitAreaMargins={{ top: 10, bottom: 10 }}
-        />
-        <Panel id="position-panel" minSize={20} defaultSize={20}>
-          <Card
-            className="position-attribute-card"
-            bordered={false}
-            title={"Positions"}
-            extra={
-              <Tooltip
-                className="tool-tip"
-                title={"To Do write a description of what this does"}
-              >
-                <Button type="link">Info</Button>
-              </Tooltip>
-            }
-          >
-            <Space size={"large"} direction="vertical">
-              <Select
-                className="graph-furniture-selection"
-                value={activeScene ? activeScene.furniture.furni_types : []}
-                options={Furnitures}
-                mode="multiple"
-                onSelect={(value) => {
-                  if (value === "None") {
-                    updateActiveScene((prev) => {
-                      prev.furniture.furni_types = [value];
-                      return prev;
-                    });
-                  } else {
-                    updateActiveScene((prev) => {
-                      let where = prev.furniture.furni_types.indexOf("None");
-                      if (where === -1) prev.furniture.furni_types.push(value);
-                      else prev.furniture.furni_types[where] = value;
-                      prev.furniture.allow_bed = false;
-                      return prev;
-                    });
-                  }
-                  setEdited(true);
-                }}
-                onDeselect={(value) => {
-                  updateActiveScene((prev) => {
-                    prev.furniture.furni_types =
-                      prev.furniture.furni_types.filter((it) => it !== value);
-                    if (prev.furniture.furni_types.length === 0) {
-                      prev.furniture.furni_types = ["None"];
-                    }
-                    return prev;
-                  });
-                  setEdited(true);
-                }}
-              />
-              <Checkbox
-                onChange={(e) => {
-                  updateActiveScene((prev) => {
-                    prev.furniture.allow_bed = e.target.checked;
-                  });
-                  setEdited(true);
-                }}
-                checked={activeScene && activeScene.furniture.allow_bed}
-                disabled={
-                  activeScene &&
-                  !activeScene.furniture.furni_types.includes("None")
-                }
-              >
-                Allow Bed
-              </Checkbox>
-              <Checkbox
-                onChange={(e) => {
-                  updateActiveScene((prev) => {
-                    prev.private = e.target.checked;
-                  });
-                  setEdited(true);
-                }}
-                checked={activeScene && activeScene.private}
-              >
-                Private
-              </Checkbox>
-              <Row gutter={[12, 12]} justify={"space-evenly"}>
-                <Col>
-                  <InputNumber
-                    addonBefore={"X"}
-                    controls
-                    decimalSeparator=","
-                    precision={1}
-                    step={0.1}
-                    value={
-                      activeScene
-                        ? activeScene.furniture.offset.x
-                          ? activeScene.furniture.offset.x
-                          : undefined
-                        : undefined
-                    }
-                    onChange={(e) => {
-                      updateActiveScene((prev) => {
-                        prev.furniture.offset.x = e;
-                      });
-                      setEdited(true);
-                    }}
-                    placeholder="0.0"
-                  />
-                </Col>
-                <Col>
-                  <InputNumber
-                    addonBefore={"Y"}
-                    controls
-                    decimalSeparator=","
-                    precision={1}
-                    step={0.1}
-                    value={
-                      activeScene && activeScene.furniture.offset.y
-                        ? activeScene.furniture.offset.y
-                        : undefined
-                    }
-                    onChange={(e) => {
-                      updateActiveScene((prev) => {
-                        prev.furniture.offset.y = e;
-                      });
-                      setEdited(true);
-                    }}
-                    placeholder="0.0"
-                  />
-                </Col>
-                <Col>
-                  <InputNumber
-                    addonBefore={"Z"}
-                    controls
-                    decimalSeparator=","
-                    precision={1}
-                    step={0.1}
-                    value={
-                      activeScene
-                        ? activeScene.furniture.offset.z
-                          ? activeScene.furniture.offset.z
-                          : undefined
-                        : undefined
-                    }
-                    onChange={(e) => {
-                      updateActiveScene((prev) => {
-                        prev.furniture.offset.z = e;
-                      });
-                      setEdited(true);
-                    }}
-                    placeholder="0.0"
-                  />
-                </Col>
-                <Col>
-                  <InputNumber
-                    addonBefore={"°"}
-                    controls
-                    decimalSeparator=","
-                    precision={1}
-                    step={0.1}
-                    min={0.0}
-                    max={359.9}
-                    value={
-                      (activeScene && activeScene.furniture.offset.r) ||
-                      undefined
-                    }
-                    onChange={(e) => {
-                      updateActiveScene((prev) => {
-                        prev.furniture.offset.r = e;
-                      });
-                      setEdited(true);
-                    }}
-                    placeholder="0.0"
-                  />
-                </Col>
-              </Row>
-            </Space>
-          </Card>
+                  </Card>
+                </Panel>
+
+              </PanelGroup>
+            </Panel>
+
+            <PanelResizeHandle className="resize-handle" />
+
+            <Panel> bottom </Panel>
+          </PanelGroup>
         </Panel>
       </PanelGroup>
     </Layout>
@@ -888,4 +931,3 @@ function App() {
 }
 
 export default App;
-

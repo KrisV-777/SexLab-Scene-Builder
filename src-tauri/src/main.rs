@@ -165,6 +165,10 @@ fn main() {
                 width: 1024,
                 height: 768,
             }));
+            let _ = window.set_min_size(Some(tauri::Size::Physical(tauri::PhysicalSize {
+                width: 800,
+                height: 600,
+            })));
             let menu_handle = app.app_handle();
             window.on_menu_event(move |event| match event.menu_item_id() {
                 NEW_PROJECT | OPEN_PROJECT | OPEN_SLAL => {

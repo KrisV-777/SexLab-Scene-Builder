@@ -184,7 +184,7 @@ h5 {
 }
 
 .graph-furniture-selection {
-  width: 256px;
+  width: 100%;
 }
 
 .sidebar-form {
@@ -207,4 +207,10 @@ h5 {
   border: 0;
   height: 2px;
   background-image: linear-gradient(to right, transparent, #CCC, transparent);
+}
+
+#position-panel {
+  /* border: red 1px solid;
+  border-left: red 5px solid;
+  margin-right: 5px; */
 }

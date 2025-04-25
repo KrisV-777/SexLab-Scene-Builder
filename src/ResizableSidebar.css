@@ -1,10 +1,28 @@
 .resize-handle {
     width: 4px;
     background-color: #f0f0f0;
+    transition: background-color 0.2s;
+    position: relative;
     cursor: col-resize;
   }
+  /* Fix to make the hover effect work properly on hover */
+  .resize-handle::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* Make the hit area larger than the visible handle */
+    width: 12px; /* Wider hit area */
+    height: 100%;
+    /* Center the hit area */
+    transform: translateX(-4px);
+    z-index: 1;
+  }
   
-  .resize-handle:hover {
+  .resize-handle:hover,
+  .resize-handle:active {
     background-color: #1677ff;
   }
   

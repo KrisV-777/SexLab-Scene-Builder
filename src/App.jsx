@@ -15,6 +15,7 @@ const { Header, Content, Footer, Sider } = Layout;
 const { confirm } = Modal;
 import { STAGE_EDGE, STAGE_EDGE_SHAPEID } from "./scene/SceneEdge"
 import { Furnitures } from "./common/Furniture";
+import PositionField from "./stage/PositionField";
 import "./scene/SceneNode"
 import "./App.css";
 import "./Dark.css";
@@ -542,12 +543,17 @@ function App() {
 
         <Panel>
           <PanelGroup  direction="vertical">
-            <Panel defaultSize={50}>
+            <Panel 
+              defaultSize={50}
+              style={{
+
+              }}
+            >
               <PanelGroup direction="horizontal">
 
                 {/* Graph Area */}
                 <Panel id="graph-panel" >
-                  <Layout>
+                  <Layout style={{ height: "100%" }}>
                     <Content>
                       {/* hacky workaround because graph doesnt render nodes if I put the graph interface into a child component zzz */}
                       {/* if (activeScene) ... */}
@@ -557,6 +563,9 @@ function App() {
                       >
                         <Card
                           className="graph-editor-field a"
+                          style={{
+                            height: "100%"
+                          }}
                           title={
                             activeScene ? (
                               <Space.Compact style={{ width: "98%" }}>
@@ -741,6 +750,10 @@ function App() {
                   minSize={30}
                   defaultSize={30}
                   maxSize={40}
+                  Scroll
+                  // style={{
+                  //   overflow: "auto",
+                  // }}
                 >
                   <Card
                     className="sceneTags-attribute-card"
@@ -922,7 +935,25 @@ function App() {
 
             <PanelResizeHandle className="resize-handle-horizontal" />
 
-            <Panel minSize={15} maxSize={50}> bottom </Panel>
+            {/* Bottom Positions Field */}
+            <Panel minSize={15} maxSize={50} id="Scene Positions">
+            <Card
+                    className="sceneTags-attribute-card"
+                    bordered={false}
+                    title={"Scene Tags"}
+                    extra={
+                      <Tooltip
+                        className="tool-tip"
+                        title={"To Do write a description of what this does"}
+                      >
+                        <Button type="link">Info</Button>
+                      </Tooltip>
+                    }
+                  >         tesatasdfgasdfg
+              </Card>     
+            </Panel>
+            {/* Bottom Positions Field */}
+            
           </PanelGroup>
         </Panel>
       </PanelGroup>

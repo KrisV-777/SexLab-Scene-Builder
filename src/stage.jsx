@@ -12,7 +12,7 @@ import PositionField from "./stage/PositionField";
 import "./stage.css";
 import "./Dark.css";
 
-const { Header, Content, Footer, Sider } = Layout;
+const { Header } = Layout;
 const { TextArea } = Input;
 
 document.addEventListener('DOMContentLoaded', async () => {

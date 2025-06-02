@@ -9,7 +9,7 @@ use std::{
     path::PathBuf,
     vec,
 };
-use tauri::api::dialog::blocking::FileDialogBuilder;
+use tauri_plugin_dialog::DialogExt;
 
 use crate::{
     define::serialize::{make_fnis_lines, map_race_to_folder},
@@ -49,7 +49,6 @@ impl Project {
 
     pub fn reset(&mut self) -> &Self {
         *self = Self::new();
-
         self
     }
 
@@ -90,18 +89,17 @@ impl Project {
         None
     }
 
-    pub fn load_project(&mut self) -> Result<(), String> {
-        let path = FileDialogBuilder::new()
-            .add_filter("SL Project File", vec!["slsb.json"].as_slice())
-            .pick_file()
-            .ok_or("No path to load project from".to_string())?;
-        let file = fs::File::open(&path).map_err(|e| e.to_string())?;
-        let value = Project::from_file(file)?;
-
-        *self = value;
+    pub fn load_project(&mut self, app: &tauri::AppHandle) -> Result<(), String> {
+        let path = app.dialog()
+            .file()
+            .add_filter("SexLab Project", &["slsb.json"])
+            .blocking_pick_file()
+            .ok_or("No path to load project from".to_string())?
+            .into_path()
+            .map_err(|e| e.to_string())?;
+        *self = Project::from_file(fs::File::open(&path).map_err(|e| e.to_string())?)?;
         self.set_project_name_from_path(&path);
-        self.pack_path = path;
-
+        self.pack_path = path.into();
         Ok(())
     }
 
@@ -112,22 +110,22 @@ impl Project {
         Ok(project)
     }
 
-    pub fn save_project(&mut self, save_as: bool) -> Result<(), String> {
+    pub fn save_project(&mut self, save_as: bool, app: &tauri::AppHandle) -> Result<(), String> {
         let path = if save_as || !self.pack_path.exists() || self.pack_path.is_dir() {
-            let f = FileDialogBuilder::new()
+            app.dialog()
+                .file()
+                .set_title("Save Project")
                 .set_file_name(&self.pack_name)
-                .add_filter("SL Project File", vec!["slsb.json"].as_slice())
-                .save_file();
-            if f.is_none() {
-                return Err("No path to save project to".into());
-            }
-            f.unwrap()
+                .add_filter("SexLab Project", &["slsb.json"])
+                .blocking_save_file()
+                .ok_or("No path to save project to".to_string())?
+                .into_path()
+                .map_err(|e| e.to_string())?
         } else {
             self.pack_path.clone()
         };
 
         self.set_project_name_from_path(&path);
-
         self.write(path)
     }
 
@@ -138,23 +136,17 @@ impl Project {
         Ok(())
     }
 
-    pub fn load_slal(&mut self) -> Result<(), String> {
-        let path = FileDialogBuilder::new()
-            .add_filter("SLAL File", vec!["json"].as_slice())
-            .pick_file();
-        if path.is_none() {
-            return Err("No path to load slal file from".into());
-        }
+    pub fn load_slal(&mut self, app: &tauri::AppHandle) -> Result<(), String> {
+        let path = app.dialog()
+            .file()
+            .set_title("Load SLAL File")
+            .add_filter("SLAL.json", &["json"])
+            .blocking_pick_file()
+            .ok_or("No path to load slal file from".to_string())?
+            .into_path()
+            .map_err(|e| e.to_string())?;
 
-        let path = path.unwrap();
-
-        match Project::from_slal(path) {
-            Ok(prjct) => {
-                *self = prjct;
-                Ok(())
-            }
-            Err(err) => Err(err),
-        }
+        Project::from_slal(path).map(|prjct| { *self = prjct })
     }
 
     pub fn from_slal(path: PathBuf) -> Result<Project, String> {
@@ -301,13 +293,17 @@ impl Project {
         Ok(prjct)
     }
 
-    pub fn export(&self) -> Result<(), std::io::Error> {
-        let path = FileDialogBuilder::new().pick_folder();
-        if path.is_none() {
-            return Err(std::io::Error::from(ErrorKind::Interrupted));
-        }
-        let root_dir = path.unwrap();
-        self.build(root_dir)
+    pub fn export(&self, app: &tauri::AppHandle) -> Result<(), std::io::Error> {
+        let path = app.dialog()
+            .file()
+            .set_title("Export Project")
+            .set_file_name(&self.pack_name)
+            .blocking_pick_folder()
+            .ok_or(std::io::Error::from(ErrorKind::NotFound))?
+            .into_path()
+            .map_err(|e| std::io::Error::new(ErrorKind::Other, e))?;
+
+        self.build(path)
     }
 
     pub fn build(&self, root_dir: PathBuf) -> Result<(), std::io::Error> {
@@ -429,11 +425,15 @@ impl Project {
         Ok(())
     }
 
-    pub fn import_offset(&mut self) -> Result<(), String> {
-        let path = FileDialogBuilder::new()
-            .add_filter("Offset File", vec!["yaml"].as_slice())
-            .pick_file()
-            .ok_or("No path to load offsets from".to_string())?;
+    pub fn import_offset(&mut self, app: &tauri::AppHandle) -> Result<(), String> {
+        let path = app.dialog()
+            .file()
+            .set_title("Import Offsets")
+            .add_filter("Offset File", &["yaml", "yml"])
+            .blocking_pick_file()
+            .ok_or("No path to load offsets from".to_string())?
+            .into_path()
+            .map_err(|e| e.to_string())?;
         let file = fs::File::open(&path).map_err(|e| e.to_string())?;
         let offsetfile: serde_yaml::Mapping =
             serde_yaml::from_reader(BufReader::new(file)).map_err(|e| e.to_string())?;

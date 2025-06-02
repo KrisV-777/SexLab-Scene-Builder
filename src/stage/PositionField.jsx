@@ -1,8 +1,8 @@
 import React, { useState, forwardRef, useImperativeHandle, useEffect } from "react";
 import { Button, Card, Checkbox, Col, Input, Row, Select, Space, Tooltip, InputNumber, Dropdown, ConfigProvider } from "antd";
-import { readTextFile, readDir } from "@tauri-apps/api/fs";
+import { readTextFile, readDir } from "@tauri-apps/plugin-fs";
 import { resourceDir } from '@tauri-apps/api/path';
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core"
 import { useImmer } from "use-immer";
 import './PositionField.css'
 

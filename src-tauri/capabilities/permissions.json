@@ -1,9 +1,9 @@
 {
-  "identifier": "migrated",
-  "description": "permissions that were migrated from v1",
+  "identifier": "global",
+  "description": "permissions for the entire application",
   "local": true,
   "windows": [
-    "main"
+    "*"
   ],
   "permissions": [
     "core:default",

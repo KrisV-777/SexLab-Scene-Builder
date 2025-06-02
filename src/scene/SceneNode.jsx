@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Space, Button, Row, Dropdown, Tooltip } from 'antd'
 import Icon, { EditOutlined, CopyOutlined, CloseOutlined, WarningOutlined, ArrowRightOutlined, HeartFilled } from '@ant-design/icons';
 import { register } from "@antv/x6-react-shape";
-import { invoke } from '@tauri-apps/api';
 import './SceneNode.css'
 
 const NODE_HEIGHT = 100;

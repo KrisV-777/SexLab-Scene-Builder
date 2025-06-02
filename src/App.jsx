@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useImmer } from "use-immer";
-import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Graph, Shape } from '@antv/x6'
 import { History } from "@antv/x6-plugin-history";

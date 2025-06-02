@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { emit, once } from '@tauri-apps/api/event'
-import { invoke } from "@tauri-apps/api/tauri";
-import { listen } from "@tauri-apps/api/event";
+import { emit, once, listen } from '@tauri-apps/api/event'
+import { invoke } from "@tauri-apps/api/core"
 import ReactDOM from "react-dom/client";
 import { useImmer } from "use-immer";
 import { AlipaySquareFilled, FileDoneOutlined, TagsOutlined , SaveOutlined, TeamOutlined } from '@ant-design/icons';

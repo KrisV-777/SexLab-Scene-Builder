@@ -176,21 +176,14 @@ fn get_race_map() -> HashMap<String, RaceKey> {
 }
 
 pub fn get_race_keys_string() -> Vec<String> {
-    let map = get_race_map();
-    let mut ret = vec![];
-    for (key, _) in map {
-        ret.push(key);
-    }
-    ret
+    get_race_map()
+        .iter()
+        .map(|(key, _)| key.clone())
+        .collect()
 }
 
 pub fn get_race_key_bytes(race: &str) -> Option<u8> {
-    let map = get_race_map();
-    // let mut key = race.to_lowercase();
-    // key.retain(|c| !c.is_whitespace() && c != '(' && c != ')');
-    // info!("Getting race key bytes for race: {}", key);
-    if let Some(entry) = map.get(race) {
-        return Some(*entry as u8);
-    }
-    None
+    get_race_map()
+        .get(race)
+        .map(|&key| key as u8)
 }

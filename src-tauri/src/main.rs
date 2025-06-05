@@ -2,12 +2,12 @@
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
 )]
-mod define;
+mod project;
 mod furniture;
 mod racekeys;
 mod cli;
 
-use define::{position::Position, project::Project, scene::Scene, stage::Stage, NanoID};
+use project::{position::Position, package::Package, scene::Scene, stage::Stage, NanoID};
 use log::{error, info};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -18,7 +18,7 @@ use std::{
     },
 };
 use tauri::{
-    menu::{Menu, MenuBuilder, MenuItem, SubmenuBuilder}, AppHandle, Emitter, Listener, Manager, Runtime, WebviewWindowBuilder, Wry
+    menu::{CheckMenuItem, Menu, MenuBuilder, MenuItem, SubmenuBuilder}, AppHandle, Emitter, Listener, Manager, Runtime, WebviewWindowBuilder, Wry
 };
 use tauri_plugin_cli::CliExt;
 use tauri_plugin_opener::OpenerExt;
@@ -26,8 +26,8 @@ use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 const DEFAULT_MAINWINDOW_TITLE: &str = "SexLab Scene Builder";
 
-pub static PROJECT: Lazy<Mutex<Project>> = Lazy::new(|| {
-    let prjct = Project::new();
+pub static PROJECT: Lazy<Mutex<Package>> = Lazy::new(|| {
+    let prjct = Package::new();
     Mutex::new(prjct)
 });
 
@@ -172,7 +172,7 @@ fn get_menu(app: &AppHandle) -> Result<Menu<Wry>, Box<dyn std::error::Error>> {
         .quit()
         .build()?;
     let view_menu = SubmenuBuilder::new(app, "View")
-        .check(DARKMODE, "Dark Mode")
+        .item(&CheckMenuItem::with_id(app, DARKMODE, "Dark Mode", true, get_darkmode(), Option::<&str>::None)?)
         .build()?;
     let help_menu = SubmenuBuilder::new(app, "Help")
         .text("open_docs", "Open Wiki")
@@ -321,7 +321,7 @@ async fn save_scene<R: Runtime>(window: tauri::Window<R>, scene: Scene) -> () {
 #[tauri::command]
 fn delete_scene<R: Runtime>(window: tauri::Window<R>, id: NanoID) -> Result<Scene, String> {
     let ret = PROJECT.lock().unwrap().discard_scene(&id).ok_or_else(|| {
-        let msg = format!("Invalid Scene ID: {}", id);
+        let msg = format!("Invalid Scene ID: {}", id.0);
         error!("{}", msg);
         msg
     });
@@ -348,10 +348,10 @@ struct EditorPayload {
 
 fn open_stage_editor_impl<R: Runtime>(app: &tauri::AppHandle<R>, payload: EditorPayload) {
     let ref stage = payload.stage;
-    info!("Opening Stage {}", stage.id);
+    info!("Opening Stage {}", stage.id.0);
     let window = WebviewWindowBuilder::new(
         app,
-        format!("stage_editor_{}", stage.id),
+        format!("stage_editor_{}", stage.id.0),
         tauri::WebviewUrl::App("./stage.html".into()),
     )
     .title(if stage.name.is_empty() {
@@ -406,7 +406,7 @@ async fn stage_save_and_close<R: Runtime>(
 ) -> () {
     // IDEA: make give this event some unique id to allow
     // front end distinguish the timings at which some stage editor has been opened
-    info!("Saving Stage {}", stage.id);
+    info!("Saving Stage {}", stage.id.0);
     app.emit_to(MAIN_WINDOW, "on_stage_saved", stage).unwrap();
     let _ = window.close();
 }

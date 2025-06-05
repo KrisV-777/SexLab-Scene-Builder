@@ -1,9 +1,7 @@
-use std::{mem::size_of, vec};
-
-use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
+use std::vec;
 
-use super::{position::Position, serialize::EncodeBinary, NanoID, NANOID_ALPHABET, NANOID_LENGTH};
+use super::{position::Position, serialize::EncodeBinary, NanoID};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Stage {
@@ -53,46 +51,39 @@ impl Stage {
 
         Ok(())
     }
+
+    pub fn update_to_latest_version(&mut self, old_version: u8) -> Result<(), String> {
+        for pos in &mut self.positions {
+            pos.update_to_latest_version(old_version)?;
+        }
+        Ok(())
+    }
 }
 
 impl EncodeBinary for Stage {
     fn get_byte_size(&self) -> usize {
-        let mut ret = NANOID_LENGTH
-            + 3 * size_of::<u64>()
-            + self.tags.len() * size_of::<u64>()
-            + size_of::<i32>()
-            + self.extra.nav_text.len();
-        for tag in &self.tags {
-            ret += tag.len() + 1;
-        }
-        for position in &self.positions {
-            ret += position.get_byte_size();
-        }
-
-        ret
+        self.id.get_byte_size() +
+            self.positions.get_byte_size() +
+            self.extra.fixed_len.get_byte_size() +
+            self.extra.nav_text.get_byte_size() +
+            self.tags.get_byte_size()
     }
 
     fn write_byte(&self, buf: &mut Vec<u8>) -> () {
-        // id
-        buf.extend_from_slice(self.id.as_bytes());
-        // positions
-        buf.extend_from_slice(&(self.positions.len() as u64).to_be_bytes());
-        for position in &self.positions {
-            position.write_byte(buf);
-        }
-        // extra
-        let l_ = (self.extra.fixed_len * 1000.0).round() as i32;
-        buf.extend_from_slice(&l_.to_be_bytes());
-        buf.extend_from_slice(&(self.extra.nav_text.len() as u64).to_be_bytes());
-        buf.extend_from_slice(self.extra.nav_text.as_bytes());
-        // tags
-        buf.extend_from_slice(&(self.tags.len() as u64).to_be_bytes());
-        for tag in &self.tags {
-            let tmp: String = tag.chars().filter(|c| !c.is_whitespace()).collect();
-            let tmp = tmp.to_lowercase();
-            buf.extend_from_slice(&(tmp.len() as u64).to_be_bytes());
-            buf.extend_from_slice(tmp.as_bytes());
-        }
+        self.id.write_byte(buf);
+        self.positions.write_byte(buf);
+        self.extra.fixed_len.write_byte(buf);
+        self.extra.nav_text.write_byte(buf);
+        self.tags
+            .iter()
+            .map(|tag| {
+                tag.chars()
+                    .filter(|c| !c.is_whitespace())
+                    .collect::<String>()
+                    .to_lowercase()
+            })
+            .collect::<Vec<_>>()
+            .write_byte(buf);
     }
 }
 
@@ -105,7 +96,7 @@ impl PartialEq for Stage {
 impl Default for Stage {
     fn default() -> Self {
         Self {
-            id: nanoid!(NANOID_LENGTH, &NANOID_ALPHABET),
+            id: NanoID::new_nanoid(),
             name: Default::default(),
             positions: vec![Position::default()],
             tags: Default::default(),

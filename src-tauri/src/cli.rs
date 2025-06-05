@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use crate::define::project::Project;
+use crate::project::package::Package;
 
 pub fn convert(
   args: std::collections::HashMap<String, tauri_plugin_cli::ArgData>,
@@ -24,7 +24,7 @@ pub fn convert(
   out_path.set_extension("slsb.json");
   println!("Converting {} to {}", in_path.display(), out_path.display());
 
-  let mut project = Project::from_slal(in_path)?;
+  let mut project = Package::from_slal(in_path)?;
   project.write(out_path.clone())
 }
 
@@ -48,6 +48,6 @@ pub fn build(
   }
 
   let file = std::fs::File::open(&in_path).map_err(|e| e.to_string())?;
-  let project = Project::from_file(file)?;
+  let project = Package::from_file(file)?;
   project.build(out_dir).map_err(|e| e.to_string())
 }

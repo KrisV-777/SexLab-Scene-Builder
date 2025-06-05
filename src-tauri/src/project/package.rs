@@ -1,5 +1,4 @@
 use log::info;
-use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -12,39 +11,65 @@ use std::{
 use tauri_plugin_dialog::DialogExt;
 
 use crate::{
-    define::serialize::{make_fnis_lines, map_race_to_folder},
+    project::{define::{Node, Sex}, serialize::{make_fnis_lines, map_race_to_folder}},
     racekeys::map_legacy_to_racekey,
 };
 
 use super::{
-    position::Sex,
-    scene::{Node, Scene},
+    scene::{Scene},
     serialize::EncodeBinary,
     stage::Stage,
-    NanoID, NANOID_ALPHABET, PREFIX_HASH_LEN,
+    NanoID,
 };
 
+
+const VERSION: u8 = 4; // current version
+
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Project {
+pub struct Package {
+    #[serde(default)]
+    pub version: u8,
     #[serde(skip)]
     pub pack_path: PathBuf,
 
     pub pack_name: String,
     pub pack_author: String,
-    pub prefix_hash: String,
+    pub prefix_hash: NanoID,
     pub scenes: HashMap<NanoID, Scene>,
 }
 
-impl Project {
+impl Package {
     pub fn new() -> Self {
         Self {
+            version: VERSION, // current version
             pack_path: Default::default(),
-
             pack_name: Default::default(),
             pack_author: "Unknown".into(),
-            prefix_hash: nanoid!(PREFIX_HASH_LEN, &NANOID_ALPHABET),
+            prefix_hash: NanoID::new_prefix(),
             scenes: HashMap::new(),
         }
+    }
+    
+    pub fn from_file(file: std::fs::File) -> Result<Package, String> {
+        serde_json::from_reader(BufReader::new(file))
+            .map_err(|e| e.to_string())
+            .and_then(|mut package: Package| {
+                if package.version < VERSION {
+                    package.update_to_latest_version()?;
+                }
+                info!("Loaded project {}", package.pack_name);
+                Ok(package)
+            })
+    }
+
+    fn update_to_latest_version(&mut self) -> Result<(), String> {
+        for (_, scene) in &mut self.scenes {
+            if let Err(e) = scene.update_to_latest_version(self.version) {
+                return Err(format!("Failed to update scene {}: {}", scene.id.0, e));
+            }
+        }
+        self.version = VERSION;
+        Ok(())
     }
 
     pub fn reset(&mut self) -> &Self {
@@ -54,21 +79,16 @@ impl Project {
 
     pub fn save_scene(&mut self, scene: Scene) -> &Scene {
         let id = scene.id.clone();
-        info!("Saving or inserting Scene: {} / {}", id, scene.name);
+        info!("Saving or inserting Scene: {} / {}", id.0, scene.name);
         self.scenes.insert(id.clone(), scene);
         self.scenes.get(&id).unwrap()
     }
 
     pub fn discard_scene(&mut self, id: &NanoID) -> Option<Scene> {
-        let ret = self.scenes.remove(id);
-        info!(
-            "Deleting Scene: {} / {}",
-            id,
-            ret.as_ref()
-                .and_then(|s| Some(s.name.as_str()))
-                .unwrap_or_default()
-        );
-        ret
+        self.scenes.remove(id).map(|s| {
+            info!("Deleting Scene: {} / {}", id.0, s.name);
+            s
+        })
     }
 
     pub fn get_scene(&self, id: &NanoID) -> Option<&Scene> {
@@ -97,17 +117,10 @@ impl Project {
             .ok_or("No path to load project from".to_string())?
             .into_path()
             .map_err(|e| e.to_string())?;
-        *self = Project::from_file(fs::File::open(&path).map_err(|e| e.to_string())?)?;
+        *self = Package::from_file(fs::File::open(&path).map_err(|e| e.to_string())?)?;
         self.set_project_name_from_path(&path);
         self.pack_path = path.into();
         Ok(())
-    }
-
-    pub fn from_file(file: std::fs::File) -> Result<Project, String> {
-        let project: Project =
-            serde_json::from_reader(BufReader::new(file)).map_err(|e| e.to_string())?;
-        println!("Loaded project {}", project.pack_name);
-        Ok(project)
     }
 
     pub fn save_project(&mut self, save_as: bool, app: &tauri::AppHandle) -> Result<(), String> {
@@ -146,16 +159,16 @@ impl Project {
             .into_path()
             .map_err(|e| e.to_string())?;
 
-        Project::from_slal(path).map(|prjct| { *self = prjct })
+        Package::from_slal(path).map(|prjct| { *self = prjct })
     }
 
-    pub fn from_slal(path: PathBuf) -> Result<Project, String> {
+    pub fn from_slal(path: PathBuf) -> Result<Package, String> {
         let file = fs::File::open(&path).map_err(|e| e.to_string())?;
 
         let slal: serde_json::Value =
             serde_json::from_reader(BufReader::new(file)).map_err(|e| e.to_string())?;
 
-        let mut prjct = Project::new();
+        let mut prjct = Package::new();
         prjct.pack_name = slal["name"]
             .as_str()
             .ok_or("Missing name attribute")?
@@ -271,7 +284,7 @@ impl Project {
             }
             // build graph
             scene.root = scene.stages[0].id.clone();
-            let mut prev_id: Option<String> = None;
+            let mut prev_id: Option<NanoID> = None;
             for stage in scene.stages.iter_mut().rev() {
                 let mut value = Node::default();
                 if let Some(id) = prev_id {
@@ -318,7 +331,7 @@ impl Project {
             let mut file = fs::File::create(target_dir.join(format!(
                 "{}.slr",
                 if self.pack_name.is_empty() {
-                    &self.prefix_hash
+                    &self.prefix_hash.0
                 } else {
                     &self.pack_name
                 }
@@ -342,7 +355,7 @@ impl Project {
                         control.insert(event);
                         let lines = make_fnis_lines(
                             &position.event,
-                            &self.prefix_hash,
+                            &self.prefix_hash.0,
                             stage.extra.fixed_len > 0.0,
                             &position.anim_obj.split(',').fold(vec![], |mut acc, x| {
                                 if !x.is_empty() {
@@ -446,7 +459,7 @@ impl Project {
                 .as_str()
                 .ok_or("Not a valid offset file, expected string for scene id".to_string())?
                 .to_string();
-            if let Some(scene) = self.get_scene_mut(&scene_id) {
+            if let Some(scene) = self.get_scene_mut(&NanoID(scene_id.clone())) {
                 scene.import_offset(
                     stages_v
                         .as_mapping()
@@ -471,42 +484,27 @@ impl Project {
     }
 }
 
-impl EncodeBinary for Project {
+impl EncodeBinary for Package {
     fn get_byte_size(&self) -> usize {
-        let mut ret = self.pack_author.len()
-            + self.pack_name.len()
-            + 3 * size_of::<u64>()
-            + PREFIX_HASH_LEN
-            + 1;
-        for (_, value) in &self.scenes {
-            if value.has_warnings {
-                continue;
-            }
-            ret += value.get_byte_size();
-        }
-
-        ret
+        self.version.get_byte_size() +
+            self.pack_name.get_byte_size() +
+            self.pack_author.get_byte_size() +
+            self.prefix_hash.get_byte_size() +
+            self.scenes
+                .iter()
+                .filter(|(_, scene)| !scene.has_warnings && !scene.stages.is_empty())
+                .fold(size_of::<u32>(), |acc, (_, scene)| acc + scene.id.get_byte_size() )
     }
 
     fn write_byte(&self, buf: &mut Vec<u8>) -> () {
-        // version
-        let version: u8 = 3;
-        buf.push(version);
-        // project
-        buf.extend_from_slice(&(self.pack_name.len() as u64).to_be_bytes());
-        buf.extend_from_slice(self.pack_name.as_bytes());
-        buf.extend_from_slice(&(self.pack_author.len() as u64).to_be_bytes());
-        buf.extend_from_slice(self.pack_author.as_bytes());
-        buf.extend_from_slice(self.prefix_hash.as_bytes());
-        buf.extend_from_slice(&(self.scenes.len() as u64).to_be_bytes());
-        for (_, scene) in &self.scenes {
-            if scene.has_warnings {
-                continue;
-            }
-            if scene.stages.len() == 0 {
-                panic!("Empty Scene whilst building files");
-            }
-            scene.write_byte(buf);
-        }
+        self.version.write_byte(buf);
+        self.pack_name.write_byte(buf);
+        self.pack_author.write_byte(buf);
+        self.prefix_hash.write_byte(buf);
+        buf.extend_from_slice(&(self.scenes.len() as u32).to_be_bytes());
+        self.scenes
+            .iter()
+            .filter(|(_, scene)| !scene.has_warnings && !scene.stages.is_empty())
+            .for_each(|(_, scene)| scene.id.write_byte(buf) );
     }
 }

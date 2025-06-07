@@ -3,7 +3,7 @@ import { emit, once, listen } from '@tauri-apps/api/event'
 import { invoke } from "@tauri-apps/api/core"
 import ReactDOM from "react-dom/client";
 import { useImmer } from "use-immer";
-import { AlipaySquareFilled, FileDoneOutlined, TagsOutlined , SaveOutlined, TeamOutlined } from '@ant-design/icons';
+import { AlipaySquareFilled, FileDoneOutlined, TagsOutlined, SaveOutlined, TeamOutlined } from '@ant-design/icons';
 import { Input, Button, Tag, Space, Tooltip, InputNumber, Card, Layout, Divider, Menu, Row, Col, Tabs, TreeSelect, notification, Collapse } from 'antd';
 
 import { tagsSFW, tagsNSFW } from "./common/Tags"
@@ -14,19 +14,22 @@ import "./Dark.css";
 const { Header } = Layout;
 const { TextArea } = Input;
 
+let root = null;
 document.addEventListener('DOMContentLoaded', async () => {
-  const load = (payload) => {
-    const { stage, control } = payload;
-    console.log("Loading stage", payload);
-    ReactDOM.createRoot(document.getElementById("root")).render(
+  const load = ({ scene, stage, positions }) => {
+    console.log("Scene ID:", scene, "Stage:", stage);
+    const merged = stage.positions.map((pos, i) => ({ position: pos, info: positions[i] }));
+    if (!root) root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(
       <React.StrictMode>
         <Editor
+          key={`Editor-${stage.id}`}
+          _scene_id={scene}
           _id={stage.id}
           _name={stage.name}
-          _positions={stage.positions}
+          _positions={merged}
           _tags={stage.tags}
           _extra={stage.extra}
-          _control={control}
         />
       </React.StrictMode>
     );
@@ -46,46 +49,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function makePositionTab(p, i) {
-  return { key: `PTab${i}`, position: p }
+  return { key: `PTab${i}`, position: p.position, info: p.info }
 }
 
-function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
+function Editor({ _scene_id, _id, _name, _positions, _tags, _extra }) {
   const [api, contextHolder] = notification.useNotification();
-  // Name
+
   const [name, setName] = useState(_name);
-  // Positions
   const [positions, updatePositions] = useImmer(_positions.map((p, i) => { return makePositionTab(p, i) }));
   const [activePosition, setActivePosition] = useState(positions[0].key);
   const positionRefs = useRef([]);
   const positionIdx = useRef(_positions.length);
-  // Tags
-  const [tagTree, updateTagTree] = useImmer([
-    {
-      value: "tagsSFW",
-      title: "SFW",
-      selectable: false,
-      children: tagsSFW.map(tag => {
-        return {
-          value: tag,
-          title: tag,
-        }
-      }),
-    },
-    {
-      value: "tagsNSFW",
-      title: "NSFW",
-      selectable: false,
-      children: tagsNSFW.map(tag => {
-        return {
-          value: tag,
-          title: tag,
-        }
-      }),
-    },
+  const [tagTree, _] = useImmer([
+    ...[['tagsSFW', 'SFW', tagsSFW], ['tagsNSFW', 'NSFW', tagsNSFW]].map(
+      ([value, title, tags]) => ({
+        value,
+        title,
+        selectable: false,
+        children: tags.map(tag => ({ value: tag, title: tag })),
+      })
+    ),
   ]);
   const [tags, updateTags] = useImmer(_tags || []);
   const [customTag, setCustomTag] = useState('');
-  // Extra
   const [fixedLen, setFixedLen] = useState(_extra.fixed_len);
   const [navText, setNavText] = useState(_extra.nav_text);
 
@@ -112,34 +98,31 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
   function saveAndReturn() {
     let errors = false;
     let position_arg = [];
+    let positions_info = [];
     positions.forEach((p, i) => {
-      let arg = positionRefs.current[i] ?
-        positionRefs.current[i].getData() :
-        p.position;
-
-      if (!arg.event.length || !arg.event[0]) {
-        api['error']({
+      const { position: stage_p, info: scene_p } = positionRefs.current[i]?.getData() || p;
+      if (!stage_p.event[0]) {
+        api.error({
           message: 'Missing Event',
           description: `Position ${i + 1} is missing its behavior file (.hkx)`,
           placement: 'bottomLeft',
         });
         errors = true;
       }
-      if (!arg.sex.male && !arg.sex.female && !arg.sex.futa) {
-        api['error']({
+      if (!scene_p.sex.male && !scene_p.sex.female && !scene_p.sex.futa) {
+        api.error({
           message: 'Missing Sex',
           description: `Position ${i + 1} has no sex assigned. Every position should be compatible with at least one sex.`,
           placement: 'bottomLeft',
         });
         errors = true;
       }
-
-      position_arg.push(arg);
+      position_arg.push(stage_p);
+      positions_info.push(scene_p);
     });
-
-    if (errors)
+    if (errors) {
       return;
-
+    }
     const stage = {
       id: _id,
       name,
@@ -150,8 +133,8 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
         nav_text: navText || '',
       },
     };
-    // console.log(stage);
-    invoke('stage_save_and_close', { stage });
+    console.log("Saving Stage... ", _scene_id, positions_info, stage);
+    invoke('stage_save_and_close', { scene: _scene_id, positions: positions_info, stage });
   }
 
   const onPositionTabEdit = (targetKey, action) => {
@@ -194,154 +177,154 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
       key: '1',
       label: 'Tags',
       extra: <TagsOutlined />,
-      children: 
-      <div className="tag-display-box">
-        <TreeSelect
-        className="tag-display-field"
-        size="large"
-        multiple
-        placeholder = "Please Select Tags"
-        allowClear
-        value={tags}
-        onSelect={(e) => {
-          updateTags((prev) => {
-            prev.push(e);
-          });
-        }}
-        onClear={() => {
-          updateTags([]);
-        }}
-        dropdownRender={(menu) => (
-          <>
-            {menu}
-            <Divider style={{ margin: '8px 0' }} />
-            <Space.Compact style={{ width: '100%' }}>
-              <Input
-                value={customTag}
-                onChange={(e) => setCustomTag(e.target.value)}
-                placeholder="Custom Tag A, Custom Tag B"
-                onPressEnter={addCustomTags}
-              />
-              <Button type="primary" onClick={addCustomTags}>
-                Add
-              </Button>
-            </Space.Compact>
-          </>
-        )}
-        maxTagTextLength={20}
-        tagRender={({ label, value, closable, onClose }) => {
-          const search = value.toLowerCase();
-          let color = tagsSFW.find((it) => it.toLowerCase() === search)
-            ? 'cyan'
-            : tagsNSFW.find((it) => it.toLowerCase() === search)
-            ? 'volcano'
-            : undefined;
+      children:
+        <div className="tag-display-box">
+          <TreeSelect
+            className="tag-display-field"
+            size="large"
+            multiple
+            placeholder="Please Select Tags"
+            allowClear
+            value={tags}
+            onSelect={(e) => {
+              updateTags((prev) => {
+                prev.push(e);
+              });
+            }}
+            onClear={() => {
+              updateTags([]);
+            }}
+            dropdownRender={(menu) => (
+              <>
+                {menu}
+                <Divider style={{ margin: '8px 0' }} />
+                <Space.Compact style={{ width: '100%' }}>
+                  <Input
+                    value={customTag}
+                    onChange={(e) => setCustomTag(e.target.value)}
+                    placeholder="Custom Tag A, Custom Tag B"
+                    onPressEnter={addCustomTags}
+                  />
+                  <Button type="primary" onClick={addCustomTags}>
+                    Add
+                  </Button>
+                </Space.Compact>
+              </>
+            )}
+            maxTagTextLength={20}
+            tagRender={({ label, value, closable, onClose }) => {
+              const search = value.toLowerCase();
+              let color = tagsSFW.find((it) => it.toLowerCase() === search)
+                ? 'cyan'
+                : tagsNSFW.find((it) => it.toLowerCase() === search)
+                  ? 'volcano'
+                  : undefined;
 
-          const onPreventMouseDown = (evt) => {
-            evt.preventDefault();
-            evt.stopPropagation();
-          };
-          const onCloseEx = () => {
-            updateTags((prev) => prev.filter((tag) => tag !== value));
-            onClose();
-          };
-          return (
-            <Tag
-              color={color}
-              onMouseDown={onPreventMouseDown}
-              closable={closable}
-              onClose={onCloseEx}
-              style={{ margin: 2 }}
-            >
-              {label}
-            </Tag>
-          );
-        }}
-        treeData={tagTree}
-        treeExpandAction={'click'}/>
-      </div>
+              const onPreventMouseDown = (evt) => {
+                evt.preventDefault();
+                evt.stopPropagation();
+              };
+              const onCloseEx = () => {
+                updateTags((prev) => prev.filter((tag) => tag !== value));
+                onClose();
+              };
+              return (
+                <Tag
+                  color={color}
+                  onMouseDown={onPreventMouseDown}
+                  closable={closable}
+                  onClose={onCloseEx}
+                  style={{ margin: 2 }}
+                >
+                  {label}
+                </Tag>
+              );
+            }}
+            treeData={tagTree}
+            treeExpandAction={'click'}
+          />
+        </div>
     },
     { // Positions
       key: '2',
       label: 'Positions',
       extra: <TeamOutlined />,
       children:
-      <Tabs
-        type="editable-card"
-        activeKey={activePosition}
-        hideAdd={positions.length > 4 || !!_control}
-        onEdit={onPositionTabEdit}
-        onChange={(e) => {
-          setActivePosition(e);
-        }}
-        items={positions.map((p, i) => {
-          return {
-            label: `Position ${i + 1}`,
-            closable: positions.length > 1 && !_control,
-            key: p.key,
-            children: (
-
-              <div className="position">
-                <PositionField
-                  _position={p.position}
-                  _control={(_control && _control.positions[i]) || null}
-                  ref={(element) => {
-                    positionRefs.current[i] = element;
-                  }}
-                />
-              </div>
-            ),
-          };
-        })}
-      />
+        <Tabs
+          type="editable-card"
+          activeKey={activePosition}
+          hideAdd={positions.length > 4}
+          onEdit={onPositionTabEdit}
+          onChange={(e) => {
+            setActivePosition(e);
+          }}
+          items={positions.map((p, i) => {
+            return {
+              label: `Position ${i + 1}`,
+              closable: positions.length > 1,
+              key: p.key,
+              children: (
+                <div className="position">
+                  <PositionField
+                    _position={p.position}
+                    _info={p.info}
+                    ref={(element) => {
+                      positionRefs.current[i] = element;
+                    }}
+                  />
+                </div>
+              ),
+            };
+          })}
+        />
     },
     { //Extra
       key: '3',
       label: 'Extra',
       extra: <FileDoneOutlined />,
       children:
-      <>
-        <Row gutter={[2, 2]}>
-          <Col span={12}>
-            <Card
-              style={{ height: '100%' }}
-              title={'Navigation'}
-              extra={
-                <Tooltip
-                  title={
-                    'A short text for the player to read when given the option to branch into this stage.'
-                  }
-                >
-                  <Button type="link">Info</Button>
-                </Tooltip>
-              }
-            >
-              <TextArea
-                className="extra-navinfo-textarea"
-                maxLength={100}
-                showCount
-                rows={3}
-                style={{ resize: 'none', width: '100%' }}
-                defaultValue={_extra.navText}
-                value={navText}
-                onChange={(e) => setNavText(e.target.value)}
-              ></TextArea>
-            </Card>
-          </Col>
-          <Col span={12}>
-            <Card
-              style={{ height: '100%' }}
-              title={'Fixed Duration'}
-              extra={
-                <Tooltip
-                  title={
-                    'Duration of an animation that should only play once (does not loop).'
-                  }
-                >
-                  <Button type="link">Info</Button>
-                </Tooltip>
-              }
-            >
+        <>
+          <Row gutter={[2, 2]}>
+            <Col span={12}>
+              <Card
+                style={{ height: '100%' }}
+                title={'Navigation'}
+                extra={
+                  <Tooltip
+                    title={
+                      'A short text for the player to read when given the option to branch into this stage.'
+                    }
+                  >
+                    <Button type="link">Info</Button>
+                  </Tooltip>
+                }
+              >
+                <TextArea
+                  className="extra-navinfo-textarea"
+                  maxLength={100}
+                  showCount
+                  rows={3}
+                  style={{ resize: 'none', width: '100%' }}
+                  defaultValue={_extra.navText}
+                  value={navText}
+                  onChange={(e) => setNavText(e.target.value)}
+                ></TextArea>
+              </Card>
+            </Col>
+            <Col span={12}>
+              <Card
+                style={{ height: '100%' }}
+                title={'Fixed Duration'}
+                extra={
+                  <Tooltip
+                    title={
+                      'Duration of an animation that should only play once (does not loop).'
+                    }
+                  >
+                    <Button type="link">Info</Button>
+                  </Tooltip>
+                }
+              >
                 <InputNumber
                   className="extra-duration-input"
                   controls
@@ -355,11 +338,10 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
                   addonAfter={'ms'}
                   style={{ width: '100%' }}
                 />
-            </Card>
-          </Col>
-        </Row>
-      </>
-
+              </Card>
+            </Col>
+          </Row>
+        </>
     }
   ]
 
@@ -409,7 +391,7 @@ function Editor({ _id, _name, _positions, _tags, _extra, _control }) {
           </Col>
         </Row>
       </Header>
-      <Collapse items={positionsCollapsed} defaultActiveKey={['1','2','3']} />;
+      <Collapse items={positionsCollapsed} defaultActiveKey={['1', '2', '3']} />;
     </Layout>
   )
 }

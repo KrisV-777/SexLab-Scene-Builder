@@ -35,8 +35,6 @@ function App() {
   const [edited, setEdited] = useState(0);
   const inEdit = useRef(0);
 
-
-
   // Dark Mode
   useEffect(() => {
     const toggleDarkMode = (toEnabled) => {
@@ -162,7 +160,7 @@ function App() {
         setEdited(true);
       })
       .on("node:clone", ({ node }) => {
-        invoke('open_stage_editor_from', { control: node.prop('stage') });
+        invoke('open_stage_editor_from', { activeScene: node.prop('scene'), stage: node.prop('stage') });
       })
 
     setGraph(newGraph);
@@ -179,9 +177,10 @@ function App() {
 
     const editStage = (node) => {
       let stage = node.prop('stage');
+      console.log("Editing stage", stage, "in scene", activeScene);
+
       console.assert(activeScene.stages.findIndex(it => it.id === stage.id) > -1, "Editing stage that does not belong to active scene: ", stage, activeScene);
-      let control = activeScene.stages.length === 1 ? null : stage;
-      invoke('open_stage_editor', { stage, control });
+      invoke('open_stage_editor', { activeScene: activeScene, stage });
     }
 
     graph
@@ -201,41 +200,49 @@ function App() {
   useEffect(() => {
     // Callback after stage has been saved in other window
     const unlisten = listen('on_stage_saved', (event) => {
-      const stage = event.payload;
-      console.log("Saving new stage", stage);
-      const nodes = graph.getNodes();
-      let node = nodes.find(node => node.id === stage.id);
-      if (!node) node = addStageToGraph(stage);
-      updateNodeProps(stage, node, activeScene);
-
-      let newActive = structuredClone(activeScene);
-      let idx = newActive.stages ? newActive.stages.findIndex(it => it.id === stage.id) : -1;
-      if (idx === -1) {
-        newActive.stages.push(stage)
-        if (newActive.stages.length === 1) {
+      const { scene, positions, stage } = event.payload;
+      console.log("Saving new stage in ", scene, positions, stage);
+      const updatingActiveScene = scenes.length === 0 || activeScene.id === scene;
+      let updatedScene = undefined, updatedSceneIdx = undefined, node = undefined;
+      if (updatingActiveScene) {
+        const nodes = graph.getNodes();
+        node = nodes.find(node => node.id === stage.id);
+        if (!node) node = addStageToGraph(stage);
+        updateNodeProps(stage, node, activeScene);
+        updatedScene = activeScene;
+      } else {
+        updatedSceneIdx = scenes.findIndex(it => it.id === sceneId);
+        if (updatedSceneIdx === -1) {
+          console.error("Scene not found in scenes list", sceneId, scenes);
+          return;
+        }
+        updatedScene = scenes[updatedSceneIdx];
+      }
+      updatedScene = structuredClone(updatedScene);
+      let editedStageIdx = updatedScene.stages?.findIndex(it => it.id === stage.id) ?? -1;
+      if (editedStageIdx === -1) {
+        // Stage is new, add it to the scene
+        updatedScene.stages = updatedScene.stages || [];
+        updatedScene.stages.push(stage);
+        if (updatedScene.stages.length === 1) {
+          // If this is the first stage, set it as the start stage
           node.prop('isStart', true);
-          newActive.root = stage.id;
+          updatedScene.root = stage.id;
         }
       } else {
-        newActive.stages[idx] = stage;
+        // Stage already exists, update it
+        updatedScene.stages[editedStageIdx] = stage;
       }
-      for (let i = 0; i < newActive.stages.length; i++) {
-        // skip if the node has just been edited or newly created
-        if (i == idx || node.id === newActive.stages[i].id) {
-          continue;
-        }
-        let node2 = nodes.find(it => it.id === newActive.stages[i].id);
-        console.assert(node2 != undefined);
-        updateNodeProps(newActive.stages[i], node2, newActive);
-        for (let n = 0; n < newActive.stages[i].positions.length; n++) {
-          newActive.stages[i].positions[n].sex = { ...stage.positions[n].sex };
-          newActive.stages[i].positions[n].scale = stage.positions[n].scale;
-          newActive.stages[i].positions[n].extra = { ...stage.positions[n].extra, climax: newActive.stages[i].positions[n].extra.climax };
-        }
+      // Update positions
+      updatedScene.positions = positions;
+      if (updatingActiveScene) {
+        updateActiveScene(updatedScene);
+        setEdited(true);
+      } else {
+        updateScenes(prev => {
+          prev[updatedSceneIdx] = updatedScene;
+        });
       }
-
-      updateActiveScene(newActive);
-      setEdited(true);
     });
     return () => {
       console.log("Active before update:", activeScene);
@@ -334,7 +341,7 @@ function App() {
   let stageToGraphX = 40;
   let stageToGraphY = 40;
   const gridSize = 200;
-  
+
   // Kind of works but it does not track state of the nodes so its really only useful for inital adding of stages.
   // TODO: Fix this probably need to use state for this
   const addStageToGraph = (stage) => {
@@ -346,7 +353,7 @@ function App() {
         stageToGraphY += gridSize;
       }
     }
-    
+
     const node = graph.addNode({
       shape: 'stage_node',
       id: stage.id,
@@ -358,6 +365,7 @@ function App() {
 
   const updateNodeProps = (stage, node, belongingScene) => {
     node.prop('stage', stage);
+    node.prop('scene', belongingScene);
     node.prop('fixedLen', stage.extra.fixed_len);
     node.prop('isStart', belongingScene && belongingScene.root === stage.id);
   }
@@ -595,7 +603,8 @@ function App() {
                               <Button
                                 onClick={() => {
                                   invoke("open_stage_editor", {
-                                    control: activeScene.stages[0],
+                                    activeScene: activeScene,
+                                    stage: null,
                                   });
                                 }}
                               >
@@ -606,7 +615,7 @@ function App() {
                               </Button>
                             </Space.Compact>
                           }
-                          // bodyStyle={{ height: 'calc(100% - 190px)' }}
+                        // bodyStyle={{ height: 'calc(100% - 190px)' }}
                         >
                           <div className="graph-toolbox">
                             <Space
@@ -745,9 +754,9 @@ function App() {
                   defaultSize={30}
                   maxSize={40}
                   Scroll
-                  // style={{
-                  //   overflow: "auto",
-                  // }}
+                // style={{
+                //   overflow: "auto",
+                // }}
                 >
                   <Card
                     className="sceneTags-attribute-card"

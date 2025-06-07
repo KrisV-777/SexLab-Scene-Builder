@@ -42,7 +42,7 @@ function StageNode({ node, graph }) {
 
   const label = stage.name;
   const navText = stage.extra.nav_text;
-  const orgasm = stage.positions.find(pos => pos.extra.climax) !== undefined;
+  const orgasm = stage.positions.find(pos => pos.climax) !== undefined;
   const color = fixedLen ?
     fixedLen < 50 ? makeColor(255, 175, 175, 1) :
       makeColor(175, 235, 255, 1)

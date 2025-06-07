@@ -1,13 +1,13 @@
 use log::warn;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, vec};
 
 use super::{
+    define::{FurnitureData, Node},
+    position_info::PositionInfo,
     serialize::EncodeBinary,
     stage::Stage,
-    position_info::PositionInfo,
     NanoID,
-    define::{FurnitureData, Node},
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -55,15 +55,17 @@ impl Scene {
                 .as_str()
                 .ok_or(format!("Expected Stage id for Scene {}", self.id.0))?
                 .to_string();
-            let stage =  self.get_stage_mut(&NanoID(scene_id.clone()));
+            let stage = self.get_stage_mut(&NanoID(scene_id.clone()));
             if stage.is_none() {
                 warn!("Scene {} has no stage with id {}", self.id.0, scene_id);
                 continue;
             }
-            stage.unwrap().import_offset(scene_obj.as_sequence().ok_or(format!(
-                "Expecting sequence in scene {} for stage {}",
-                self_id, scene_id
-            ))?)?;
+            stage
+                .unwrap()
+                .import_offset(scene_obj.as_sequence().ok_or(format!(
+                    "Expecting sequence in scene {} for stage {}",
+                    self_id, scene_id
+                ))?)?;
         }
         Ok(())
     }
@@ -74,7 +76,8 @@ impl Scene {
         }
         if old_version <= 3 {
             // Addition 2.0 (v4): PositionInfo are explicitly stored in Scene
-            self.positions = self.stages
+            self.positions = self
+                .stages
                 .first()
                 .ok_or("No stages found in Scene")?
                 .positions
@@ -96,7 +99,7 @@ impl Default for Scene {
             graph: Default::default(),
             furniture: Default::default(),
             private: Default::default(),
-            positions: Default::default(),
+            positions: vec![PositionInfo::default(); 1], // Default to one position
             has_warnings: Default::default(),
         }
     }
@@ -104,14 +107,14 @@ impl Default for Scene {
 
 impl EncodeBinary for Scene {
     fn get_byte_size(&self) -> usize {
-        self.id.get_byte_size() +
-            self.name.get_byte_size() +
-            self.positions.get_byte_size() +
-            self.stages.get_byte_size() +
-            self.root.get_byte_size() +
-            self.furniture.get_byte_size() +
-            self.private.get_byte_size() +
-            self.graph.get_byte_size()
+        self.id.get_byte_size()
+            + self.name.get_byte_size()
+            + self.positions.get_byte_size()
+            + self.stages.get_byte_size()
+            + self.root.get_byte_size()
+            + self.furniture.get_byte_size()
+            + self.private.get_byte_size()
+            + self.graph.get_byte_size()
     }
 
     fn write_byte(&self, buf: &mut Vec<u8>) -> () {

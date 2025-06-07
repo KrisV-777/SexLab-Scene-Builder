@@ -78,40 +78,51 @@ const readExtraOptions = async () => {
     return [];
   }
 };
-const PositionField = forwardRef(function PositionField({ _position, _control }, ref) {
+const PositionField = forwardRef(function PositionField({ _position, _info }, ref) {
+  // Scene Position fields
+  const [sex, updateSex] = useImmer(_info.sex);
+  const [race, setRace] = useState(_info.race);
+  const [scale, setScale] = useState(_info.scale);
+  const [extra, updateExtra] = useImmer({ submissive: _info.submissive, vampire: _info.vampire, dead: _info.dead, });
+  // Stage Position fields
+  // COMEBACK: offset & strip data copied from earlier stages?
   const [event, updateEvent] = useImmer(_position.event);
-  const [race, setRace] = useState(_control && _control.race || _position.race);
-  const [sex, updateSex] = useImmer(_control && _control.sex || _position.sex);
-  const [extra, updateExtra] = useImmer(_control && _control.extra ? { ..._control.extra, climax: _position.extra.climax } : _position.extra);
-  const [offset, updateOffset] = useImmer(_control && _control.offset || _position.offset);
-  const [scale, setScale] = useState(_control && _control.scale || _position.scale);
+  const [climax, setClimax] = useState(_position.climax);
+  const [offset, updateOffset] = useImmer(/* _control && _control.offset || */ _position.offset);
   const [anim_obj, setAnimObj] = useState(_position.anim_obj);
-  const [strips, updateStrips] = useImmer(getStrips(_control && _control.strip_data || _position.strip_data))
+  const [strips, updateStrips] = useImmer(getStrips(/* _control && _control.strip_data || */ _position.strip_data))
   const [extraOptions, setExtraOptions] = useState([]);
   const [raceKeys, setRaceKeys] = useState([]);
   const [basicAnim, setBasicAnim] = useState(true);
   const [workingAnim, setWorkingAnim] = useState(undefined);
   const [sequenceOpen, setSequenceOpen] = useState(false);
-  const [schlong, setSchlong] = useState(_position.schlong);
+  const [tags, updateTags] = useImmer(_position.tags || []);
 
   useEffect(() => {
     invoke('get_race_keys').then(result => setRaceKeys(result));
-    readExtraOptions().then(result => setExtraOptions(result));
+    // readExtraOptions().then(result => setExtraOptions(result));
   }, []);
 
   useImperativeHandle(ref, () => {
     return {
       getData() {
         return {
-          event,
-          race,
-          sex,
-          scale,
-          extra,
-          offset,
-          anim_obj,
-          schlong,
-          strip_data: makeStrips(strips),
+          position: {
+            event,
+            anim_obj,
+            offset,
+            strip_data: makeStrips(strips),
+            climax,
+            tags,
+          },
+          info: {
+            sex,
+            race,
+            scale,
+            submissive: extra.submissive,
+            vampire: extra.vampire,
+            dead: extra.dead,
+          }
         };
       }
     };
@@ -192,7 +203,6 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
             <Select
               className="position-race-select"
               defaultValue={race}
-              disabled={!!_control}
               showSearch
               placeholder="Position race"
               optionFilterProp="children"
@@ -248,36 +258,6 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
                 updateFunc={updateSex}
               />
             </Space>
-          </Card>
-        </Col>
-        <Col span={7}> {/* Schlong */}
-          <Card
-            className="position-attribute-card"
-            title={'Schlong'}
-            extra={
-              <Tooltip
-                className="tool-tip"
-                title={'The angle of this actors schlong. Only used for Male and Futa actors.'}
-              >
-                <Button type="link">Info</Button>
-              </Tooltip>
-            }
-          >
-            <InputNumber
-              className="position-schlong-input"
-              addonBefore={'S'}
-              controls
-              decimalSeparator=","
-              precision={0}
-              min={-9}
-              max={9}
-              step={1}
-              value={schlong}
-              onChange={(e) => {
-                setSchlong(e);
-              }}
-              placeholder="0"
-            />
           </Card>
         </Col>
         <Col span={24}>  {/* Animation (Basic) */}
@@ -390,11 +370,9 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
                 <Tooltip className="tool-tip" title={'Actor climaxes during this stage.'}>
                   <div>
                     <Checkbox
-                      checked={extra.climax}
+                      checked={climax}
                       onChange={(e) => {
-                        updateExtra((prev) => {
-                          prev.climax = e.target.checked;
-                        });
+                        setClimax(e.target.checked);
                       }}
                     >
                       Climax
@@ -430,20 +408,20 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
               <Select
                 mode="tags"
                 style={{ width: '100%' }}
-                value={extra.custom ? extra.custom : undefined}
-                placeholder="Custom Extra"
+                value={tags ? tags : undefined}
+                placeholder="Tags"
                 onSelect={(value) => {
                   const upperV = value.toUpperCase();
-                  const idx = extra.custom.findIndex(it => it.toUpperCase() === upperV);
+                  const idx = tags.findIndex(it => it.toUpperCase() === upperV);
                   if (idx === -1) {
-                    updateExtra(prev => { prev.custom.push(value); });
+                    updateTags(prev => { prev.push(value); });
                   }
                 }}
                 onDeselect={(value) => {
                   const upperV = value.toUpperCase();
-                  const idx = extra.custom.findIndex(it => it.toUpperCase() === upperV);
+                  const idx = tags.findIndex(it => it.toUpperCase() === upperV);
                   if (idx > -1) {
-                    updateExtra(prev => { prev.custom.splice(idx, 1); });
+                    updateTags(prev => { prev.splice(idx, 1); });
                   }
                 }}
                 options={extraOptions}

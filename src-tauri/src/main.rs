@@ -2,27 +2,28 @@
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
 )]
-mod project;
-mod furniture;
-mod racekeys;
 mod cli;
+mod furniture;
+mod project;
+mod racekeys;
 
-use project::{position::Position, package::Package, scene::Scene, stage::Stage, NanoID};
 use log::{error, info};
 use once_cell::sync::Lazy;
+use project::{package::Package, position::Position, scene::Scene, stage::Stage, NanoID};
 use serde::{Deserialize, Serialize};
-use std::{
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Mutex,
-    },
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Mutex,
 };
 use tauri::{
-    menu::{CheckMenuItem, Menu, MenuBuilder, MenuItem, SubmenuBuilder}, AppHandle, Emitter, Listener, Manager, Runtime, WebviewWindowBuilder, Wry
+    menu::{CheckMenuItem, Menu, MenuBuilder, MenuItem, SubmenuBuilder},
+    AppHandle, Emitter, Listener, Manager, Runtime, WebviewWindowBuilder, Wry,
 };
 use tauri_plugin_cli::CliExt;
-use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_opener::OpenerExt;
+
+use crate::project::position_info::PositionInfo;
 
 const DEFAULT_MAINWINDOW_TITLE: &str = "SexLab Scene Builder";
 
@@ -96,36 +97,28 @@ fn main() {
                     "convert" => cli::convert(command.matches.args),
                     "build" => cli::build(command.matches.args),
                     _ => Err(format!("Unrecognized subcommand: {}", command.name)),
-                }.map_err(|e| {
+                }
+                .map_err(|e| {
                     error!("Error while processing CLI command: {}", e);
                     Box::<dyn std::error::Error>::from(e)
                 });
                 app.handle().exit(res.is_err() as i32);
                 return res;
             }
-
-            let window = WebviewWindowBuilder::new(
+            let app_handle = app.app_handle().clone();
+            WebviewWindowBuilder::new(
                 app.app_handle(),
                 MAIN_WINDOW.to_string(),
                 tauri::WebviewUrl::App("./index.html".into()),
             )
             .title(DEFAULT_MAINWINDOW_TITLE)
             .menu(get_menu(&app.app_handle()).expect("Failed to create menu"))
+            .min_inner_size(960.0, 540.0)
+            .inner_size(1280.0, 720.0)
             .build()
-            .expect("Failed to create main window");
-            let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
-                width: 1024,
-                height: 768,
-            }));
-            let _ = window.set_min_size(Some(tauri::Size::Physical(tauri::PhysicalSize {
-                width: 800,
-                height: 600,
-            })));
-
+            .expect("Failed to create main window")
+            .on_window_event(move |event| window_event_listener(&app_handle, event));
             app.on_menu_event(menu_event_listener);
-            
-            let app_handle = app.app_handle().clone();
-            window.on_window_event(move |event| window_event_listener(&app_handle, event));
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -158,21 +151,52 @@ fn reload_project(reload_type: &str, window: &tauri::WebviewWindow) {
 fn get_menu(app: &AppHandle) -> Result<Menu<Wry>, Box<dyn std::error::Error>> {
     let file_menu = SubmenuBuilder::new(app, "File")
         .items(&[
-            &MenuItem::with_id(app, NEW_PROJECT, "New Project", true, "cmdOrControl+N".into())?,
-            &MenuItem::with_id(app, OPEN_PROJECT, "Open Project", true, "cmdOrControl+O".into())?
+            &MenuItem::with_id(
+                app,
+                NEW_PROJECT,
+                "New Project",
+                true,
+                "cmdOrControl+N".into(),
+            )?,
+            &MenuItem::with_id(
+                app,
+                OPEN_PROJECT,
+                "Open Project",
+                true,
+                "cmdOrControl+O".into(),
+            )?,
         ])
         .separator()
         .items(&[
-            &MenuItem::with_id(app, "import_offset", "Import Offset.yaml", true, Option::<&str>::None)?,
+            &MenuItem::with_id(
+                app,
+                "import_offset",
+                "Import Offset.yaml",
+                true,
+                Option::<&str>::None,
+            )?,
             &MenuItem::with_id(app, "save", "Save", true, "cmdOrControl+S".into())?,
-            &MenuItem::with_id(app, "save_as", "Save As...", true, "cmdOrControl+Shift+S".into())?,
-            &MenuItem::with_id(app, "build", "Export", true, "cmdOrControl+B".into())?
+            &MenuItem::with_id(
+                app,
+                "save_as",
+                "Save As...",
+                true,
+                "cmdOrControl+Shift+S".into(),
+            )?,
+            &MenuItem::with_id(app, "build", "Export", true, "cmdOrControl+B".into())?,
         ])
         .separator()
         .quit()
         .build()?;
     let view_menu = SubmenuBuilder::new(app, "View")
-        .item(&CheckMenuItem::with_id(app, DARKMODE, "Dark Mode", true, get_darkmode(), Option::<&str>::None)?)
+        .item(&CheckMenuItem::with_id(
+            app,
+            DARKMODE,
+            "Dark Mode",
+            true,
+            get_darkmode(),
+            Option::<&str>::None,
+        )?)
         .build()?;
     let help_menu = SubmenuBuilder::new(app, "Help")
         .text("open_docs", "Open Wiki")
@@ -182,11 +206,7 @@ fn get_menu(app: &AppHandle) -> Result<Menu<Wry>, Box<dyn std::error::Error>> {
         .text("kofi", "Ko-Fi")
         .build()?;
     let top_menu = MenuBuilder::new(app)
-        .items(&[
-            &file_menu,
-            &view_menu,
-            &help_menu,
-        ])
+        .items(&[&file_menu, &view_menu, &help_menu])
         .build()?;
     Ok(top_menu)
 }
@@ -218,7 +238,8 @@ fn menu_event_listener(app: &tauri::AppHandle, event: tauri::menu::MenuEvent) {
             }
             set_edited(false);
             let window = app.get_webview_window(MAIN_WINDOW).unwrap();
-            let _ = window.set_title(format!("{} - {}", DEFAULT_MAINWINDOW_TITLE, prjct.pack_name).as_str());
+            let _ = window
+                .set_title(format!("{} - {}", DEFAULT_MAINWINDOW_TITLE, prjct.pack_name).as_str());
         }
         "build" => {
             let prjct = PROJECT.lock().unwrap();
@@ -235,16 +256,26 @@ fn menu_event_listener(app: &tauri::AppHandle, event: tauri::menu::MenuEvent) {
             }
         }
         "open_docs" => {
-            let _ = app.opener().open_url("https://github.com/Scrabx3/SexLab/wiki/Scene-Builder", Option::<String>::None);
+            let _ = app.opener().open_url(
+                "https://github.com/Scrabx3/SexLab/wiki/Scene-Builder",
+                Option::<String>::None,
+            );
         }
         "discord" => {
-            let _ = app.opener().open_url("https://discord.gg/JPSHb4ebqj", Option::<String>::None);
+            let _ = app
+                .opener()
+                .open_url("https://discord.gg/JPSHb4ebqj", Option::<String>::None);
         }
         "patreon" => {
-            let _ = app.opener().open_url("https://www.patreon.com/ScrabJoseline", Option::<String>::None);
+            let _ = app.opener().open_url(
+                "https://www.patreon.com/ScrabJoseline",
+                Option::<String>::None,
+            );
         }
         "kofi" => {
-            let _ = app.opener().open_url("https://ko-fi.com/scrab", Option::<String>::None);
+            let _ = app
+                .opener()
+                .open_url("https://ko-fi.com/scrab", Option::<String>::None);
         }
         "import_offset" => {
             let mut prjct = PROJECT.lock().unwrap();
@@ -252,7 +283,9 @@ fn menu_event_listener(app: &tauri::AppHandle, event: tauri::menu::MenuEvent) {
                 error!("{}", err);
             }
         }
-        _ => {error!("Unrecognized command: {}", event.id().0)}
+        _ => {
+            error!("Unrecognized command: {}", event.id().0)
+        }
     }
 }
 
@@ -260,7 +293,8 @@ fn window_event_listener(app: &AppHandle, event: &tauri::WindowEvent) {
     match event {
         tauri::WindowEvent::CloseRequested { api, .. } => {
             if get_edited() {
-                let do_close = app.dialog()
+                let do_close = app
+                    .dialog()
                     .message("There are unsaved changes. Are you sure you want to close?")
                     .title("Close")
                     .buttons(MessageDialogButtons::YesNo)
@@ -342,32 +376,39 @@ fn delete_scene<R: Runtime>(window: tauri::Window<R>, id: NanoID) -> Result<Scen
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct EditorPayload {
+    pub scene: NanoID,
     pub stage: Stage,
-    pub control: Option<Stage>,
+    pub positions: Vec<PositionInfo>,
 }
 
 fn open_stage_editor_impl<R: Runtime>(app: &tauri::AppHandle<R>, payload: EditorPayload) {
-    let ref stage = payload.stage;
-    info!("Opening Stage {}", stage.id.0);
+    let stage = &payload.stage;
+    info!(
+        "Opening Stage {} from Scene {}",
+        stage.id.0, payload.scene.0
+    );
     let window = WebviewWindowBuilder::new(
         app,
         format!("stage_editor_{}", stage.id.0),
         tauri::WebviewUrl::App("./stage.html".into()),
     )
-    .title(if stage.name.is_empty() {
-        "Stage Editor [Untitled]".into()
-    } else {
-        format!("Stage Editor [{}]", stage.name.as_str())
-    })
+    .title(format!(
+        "Stage Editor [{}]",
+        if stage.name.is_empty() {
+            "Untitled"
+        } else {
+            stage.name.as_str()
+        }
+    ))
     .min_inner_size(800.0, 600.0)
+    .inner_size(1152.0, 864.0)
+    .resizable(true)
     .build()
-    .unwrap();
-    let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
-        width: 1024,
-        height: 768,
-    }));
-    let _ = window.set_resizable(true);
-    window.clone().listen("on_request_data", move |_| {
+    .expect(&format!(
+        "Failed to create stage editor window for Stage {}",
+        stage.id.0
+    ));
+    window.clone().once("on_request_data", move |_| {
         window.emit("on_data_received", payload.clone()).unwrap();
     });
 }
@@ -375,45 +416,71 @@ fn open_stage_editor_impl<R: Runtime>(app: &tauri::AppHandle<R>, payload: Editor
 #[tauri::command]
 async fn open_stage_editor<R: Runtime>(
     app: tauri::AppHandle<R>,
+    active_scene: Scene,
     stage: Option<Stage>,
-    control: Option<Stage>,
 ) -> () {
-    let stage = stage.unwrap_or(Stage::from_count(
-        control
-            .as_ref()
-            .and_then(|stage| Some(stage.positions.len()))
-            .unwrap_or(1),
-    ));
-    open_stage_editor_impl(&app, EditorPayload { stage, control });
+    open_stage_editor_impl(
+        &app,
+        EditorPayload {
+            scene: active_scene.id.clone(),
+            stage: stage.unwrap_or_default(),
+            positions: active_scene.positions.clone(),
+        },
+    );
 }
 
 #[tauri::command]
-async fn open_stage_editor_from<R: Runtime>(app: tauri::AppHandle<R>, control: Stage) -> () {
-    let mut stage = Stage::from_count(control.positions.len());
-    stage.tags = control.tags.clone();
-    let payload = EditorPayload {
-        stage,
-        control: Some(control),
-    };
-    open_stage_editor_impl(&app, payload);
+async fn open_stage_editor_from<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    active_scene: Scene,
+    copy_stage: Stage,
+) -> () {
+    open_stage_editor_impl(
+        &app,
+        EditorPayload {
+            scene: active_scene.id.clone(),
+            stage: copy_stage.clone(),
+            positions: active_scene.positions.clone(),
+        },
+    );
 }
 
 #[tauri::command]
 async fn stage_save_and_close<R: Runtime>(
     app: tauri::AppHandle<R>,
     window: tauri::Window<R>,
+    scene: NanoID,
+    positions: Vec<PositionInfo>,
     stage: Stage,
 ) -> () {
     // IDEA: make give this event some unique id to allow
     // front end distinguish the timings at which some stage editor has been opened
     info!("Saving Stage {}", stage.id.0);
-    app.emit_to(MAIN_WINDOW, "on_stage_saved", stage).unwrap();
+    app.emit_to(
+        MAIN_WINDOW,
+        "on_stage_saved",
+        EditorPayload {
+            scene,
+            stage,
+            positions,
+        },
+    )
+    .unwrap();
     let _ = window.close();
 }
 
 /* Position related */
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct PositionPayload {
+    pub position: Position,
+    pub info: PositionInfo,
+}
+
 #[tauri::command]
-fn make_position() -> Position {
-    Position::default()
+fn make_position() -> PositionPayload {
+    PositionPayload {
+        position: Position::default(),
+        info: PositionInfo::default(),
+    }
 }

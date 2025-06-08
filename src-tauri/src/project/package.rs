@@ -496,7 +496,7 @@ impl EncodeBinary for Package {
                 .iter()
                 .filter(|(_, scene)| !scene.has_warnings && !scene.stages.is_empty())
                 .fold(size_of::<u32>(), |acc, (_, scene)| {
-                    acc + scene.id.get_byte_size()
+                    acc + scene.get_byte_size()
                 })
     }
 
@@ -509,6 +509,6 @@ impl EncodeBinary for Package {
         self.scenes
             .iter()
             .filter(|(_, scene)| !scene.has_warnings && !scene.stages.is_empty())
-            .for_each(|(_, scene)| scene.id.write_byte(buf));
+            .for_each(|(_, scene)| scene.write_byte(buf));
     }
 }

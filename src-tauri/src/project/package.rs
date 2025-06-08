@@ -11,17 +11,14 @@ use std::{
 use tauri_plugin_dialog::DialogExt;
 
 use crate::{
-    project::{define::{Node, Sex}, serialize::{make_fnis_lines, map_race_to_folder}},
+    project::{
+        define::{Node, Sex},
+        serialize::{make_fnis_lines, map_race_to_folder},
+    },
     racekeys::map_legacy_to_racekey,
 };
 
-use super::{
-    scene::{Scene},
-    serialize::EncodeBinary,
-    stage::Stage,
-    NanoID,
-};
-
+use super::{scene::Scene, serialize::EncodeBinary, stage::Stage, NanoID};
 
 const VERSION: u8 = 4; // current version
 
@@ -49,7 +46,7 @@ impl Package {
             scenes: HashMap::new(),
         }
     }
-    
+
     pub fn from_file(file: std::fs::File) -> Result<Package, String> {
         serde_json::from_reader(BufReader::new(file))
             .map_err(|e| e.to_string())
@@ -110,7 +107,8 @@ impl Package {
     }
 
     pub fn load_project(&mut self, app: &tauri::AppHandle) -> Result<(), String> {
-        let path = app.dialog()
+        let path = app
+            .dialog()
             .file()
             .add_filter("SexLab Project", &["slsb.json"])
             .blocking_pick_file()
@@ -150,7 +148,8 @@ impl Package {
     }
 
     pub fn load_slal(&mut self, app: &tauri::AppHandle) -> Result<(), String> {
-        let path = app.dialog()
+        let path = app
+            .dialog()
             .file()
             .set_title("Load SLAL File")
             .add_filter("SLAL.json", &["json"])
@@ -159,7 +158,7 @@ impl Package {
             .into_path()
             .map_err(|e| e.to_string())?;
 
-        Package::from_slal(path).map(|prjct| { *self = prjct })
+        Package::from_slal(path).map(|prjct| *self = prjct)
     }
 
     pub fn from_slal(path: PathBuf) -> Result<Package, String> {
@@ -307,7 +306,8 @@ impl Package {
     }
 
     pub fn export(&self, app: &tauri::AppHandle) -> Result<(), std::io::Error> {
-        let path = app.dialog()
+        let path = app
+            .dialog()
             .file()
             .set_title("Export Project")
             .set_file_name(&self.pack_name)
@@ -439,7 +439,8 @@ impl Package {
     }
 
     pub fn import_offset(&mut self, app: &tauri::AppHandle) -> Result<(), String> {
-        let path = app.dialog()
+        let path = app
+            .dialog()
             .file()
             .set_title("Import Offsets")
             .add_filter("Offset File", &["yaml", "yml"])
@@ -486,14 +487,17 @@ impl Package {
 
 impl EncodeBinary for Package {
     fn get_byte_size(&self) -> usize {
-        self.version.get_byte_size() +
-            self.pack_name.get_byte_size() +
-            self.pack_author.get_byte_size() +
-            self.prefix_hash.get_byte_size() +
-            self.scenes
+        self.version.get_byte_size()
+            + self.pack_name.get_byte_size()
+            + self.pack_author.get_byte_size()
+            + self.prefix_hash.get_byte_size()
+            + self
+                .scenes
                 .iter()
                 .filter(|(_, scene)| !scene.has_warnings && !scene.stages.is_empty())
-                .fold(size_of::<u32>(), |acc, (_, scene)| acc + scene.id.get_byte_size() )
+                .fold(size_of::<u32>(), |acc, (_, scene)| {
+                    acc + scene.id.get_byte_size()
+                })
     }
 
     fn write_byte(&self, buf: &mut Vec<u8>) -> () {
@@ -505,6 +509,6 @@ impl EncodeBinary for Package {
         self.scenes
             .iter()
             .filter(|(_, scene)| !scene.has_warnings && !scene.stages.is_empty())
-            .for_each(|(_, scene)| scene.id.write_byte(buf) );
+            .for_each(|(_, scene)| scene.id.write_byte(buf));
     }
 }

@@ -168,6 +168,7 @@ impl Package {
             serde_json::from_reader(BufReader::new(file)).map_err(|e| e.to_string())?;
 
         let mut prjct = Package::new();
+        prjct.version = 0; // SLAL files are always version 0
         prjct.pack_name = slal["name"]
             .as_str()
             .ok_or("Missing name attribute")?
@@ -295,13 +296,12 @@ impl Package {
             // add to prjct
             prjct.scenes.insert(scene.id.clone(), scene);
         }
-
         println!(
             "Loaded {} Animations from {}",
             prjct.scenes.len(),
             path.to_str().unwrap_or_default()
         );
-
+        prjct.update_to_latest_version()?;
         Ok(prjct)
     }
 
@@ -321,116 +321,8 @@ impl Package {
 
     pub fn build(&self, root_dir: PathBuf) -> Result<(), std::io::Error> {
         println!("Compiling project {}", self.pack_name);
-        // Write binary
-        {
-            let target_dir = root_dir.join("SKSE\\SexLab\\Registry\\");
-            let mut buf: Vec<u8> = Vec::new();
-            buf.reserve(self.get_byte_size());
-            self.write_byte(&mut buf);
-            fs::create_dir_all(&target_dir)?;
-            let mut file = fs::File::create(target_dir.join(format!(
-                "{}.slr",
-                if self.pack_name.is_empty() {
-                    &self.prefix_hash.0
-                } else {
-                    &self.pack_name
-                }
-            )))?;
-            file.write_all(&buf)?;
-        }
-        // Write FNIS files
-        {
-            let mut events: HashMap<&str, Vec<String>> = HashMap::new(); // map<RaceKey, Lines[]>
-            let mut control: HashSet<&str> = HashSet::from(["__BLANK__", "__DEFAULT__"]);
-            for (_, scene) in &self.scenes {
-                if scene.has_warnings {
-                    continue;
-                }
-                for stage in &scene.stages {
-                    for position in &stage.positions {
-                        let event = &position.event[0];
-                        if control.contains(event.as_str()) {
-                            continue;
-                        }
-                        control.insert(event);
-                        let lines = make_fnis_lines(
-                            &position.event,
-                            &self.prefix_hash.0,
-                            stage.extra.fixed_len > 0.0,
-                            &position.anim_obj.split(',').fold(vec![], |mut acc, x| {
-                                if !x.is_empty() {
-                                    acc.push(x.to_string());
-                                }
-                                acc
-                            }),
-                        );
-                        let mut insert = |race| {
-                            events
-                                .entry(race)
-                                .and_modify(|list| list.append(&mut lines.clone()))
-                                .or_insert(lines.clone());
-                        };
-                        let race = position.race.as_str();
-                        match race {
-                            "Canine" => {
-                                insert(&position.race);
-                                insert("Dog");
-                                insert("Wolf");
-                            }
-                            "Dog" | "Wolf" => {
-                                insert(&position.race);
-                                insert("Canine");
-                            }
-                            "Chaurus" | "Chaurus Reaper" => insert("Chaurus"),
-                            "Spider" | "Large Spider" | "Giant Spider" => insert("Spider"),
-                            "Boar" | "Boar (Mounted)" | "Boar (Any)" => insert("Boar (Any)"),
-                            _ => insert(&position.race),
-                        }
-                    }
-                }
-            }
-            info!("---------------------------------------------------------");
-            for (racekey, anim_events) in events {
-                let target_folder = map_race_to_folder(racekey)
-                    .expect(format!("Cannot find folder for RaceKey {}", racekey).as_str());
-                let path = root_dir.join(format!(
-                    "meshes\\actors\\{}\\animations\\{}",
-                    target_folder, self.pack_name
-                ));
-                let crt = &target_folder[target_folder
-                    .find('\\')
-                    .and_then(|w| Some(w + 1))
-                    .unwrap_or(0)..];
-                fs::create_dir_all(&path)?;
-
-                let create = |file_path: PathBuf| -> Result<(), std::io::Error> {
-                    let name = file_path.to_str().unwrap_or("NONE".into()).to_string();
-                    let file = fs::File::create(file_path)?;
-                    let mut file = BufWriter::new(file);
-                    info!(
-                        "Adding {} lines to race {} |||||| file: {}",
-                        anim_events.len(),
-                        racekey,
-                        name
-                    );
-                    for anim_event in anim_events {
-                        writeln!(file, "{}", anim_event)?;
-                    }
-                    Ok(())
-                };
-                match crt {
-                    "character" => create(path.join(format!("FNIS_{}_List.txt", self.pack_name))),
-                    "canine" => match racekey {
-                        "Canine" => {
-                            create(path.join(format!("FNIS_{}_canine_List.txt", self.pack_name)))
-                        }
-                        "Dog" => create(path.join(format!("FNIS_{}_dog_List.txt", self.pack_name))),
-                        _ => create(path.join(format!("FNIS_{}_wolf_List.txt", self.pack_name))),
-                    },
-                    _ => create(path.join(format!("FNIS_{}_{}_List.txt", self.pack_name, crt))),
-                }?;
-            }
-        }
+        self.write_binary_file(&root_dir)?;
+        self.write_fnis_files(&root_dir)?;
         info!(
             "Successfully compiled {}",
             root_dir.to_str().unwrap_or_default()
@@ -482,6 +374,139 @@ impl Package {
                 })
                 .unwrap_or_default(),
         );
+    }
+
+    fn write_binary_file(&self, root_dir: &PathBuf) -> Result<(), std::io::Error> {
+        let target_dir = root_dir.join("SKSE\\SexLab\\Registry\\");
+        let project_name = format!(
+            "{}.slr",
+            if self.pack_name.is_empty() {
+                &self.prefix_hash.0
+            } else {
+                &self.pack_name
+            }
+        );
+        let mut buf: Vec<u8> = Vec::new();
+        buf.reserve(self.get_byte_size());
+        info!(
+            "Writing binary file for project {} with size {} at {}",
+            project_name,
+            buf.capacity(),
+            target_dir.to_str().unwrap_or("Unknown path")
+        );
+        self.write_byte(&mut buf);
+        fs::create_dir_all(&target_dir)?;
+        fs::File::create(target_dir.join(project_name))?.write(&buf)?;
+        Ok(())
+    }
+
+    fn write_fnis_files(&self, root_dir: &PathBuf) -> Result<(), std::io::Error> {
+        let mut events: HashMap<&str, Vec<String>> = HashMap::new(); // map<RaceKey, Lines[]>
+        let mut control: HashSet<&str> = HashSet::from(["__BLANK__", "__DEFAULT__"]);
+        for (_, scene) in &self.scenes {
+            if scene.has_warnings {
+                continue;
+            }
+            assert_eq!(
+                scene
+                    .stages
+                    .first()
+                    .expect(&format!("Scene {} has 0 Stages", scene.id.0))
+                    .positions
+                    .len(),
+                scene.positions.len()
+            );
+            for stage in &scene.stages {
+                for i in 0..stage.positions.len() {
+                    let stage_position = &stage.positions[i];
+                    let scene_position = &scene.positions[i];
+                    let event = &stage_position.event[0];
+                    if control.contains(event.as_str()) {
+                        continue;
+                    }
+                    control.insert(event);
+                    let lines = make_fnis_lines(
+                        &stage_position.event,
+                        &self.prefix_hash.0,
+                        stage.extra.fixed_len > 0.0,
+                        &stage_position
+                            .anim_obj
+                            .split(',')
+                            .fold(vec![], |mut acc, x| {
+                                if !x.is_empty() {
+                                    acc.push(x.to_string());
+                                }
+                                acc
+                            }),
+                    );
+                    let mut insert = |race| {
+                        events
+                            .entry(race)
+                            .and_modify(|list| list.append(&mut lines.clone()))
+                            .or_insert(lines.clone());
+                    };
+                    let race = scene_position.race.as_str();
+                    match race {
+                        "Canine" => {
+                            insert(&race);
+                            insert("Dog");
+                            insert("Wolf");
+                        }
+                        "Dog" | "Wolf" => {
+                            insert(&race);
+                            insert("Canine");
+                        }
+                        "Chaurus" | "Chaurus Reaper" => insert("Chaurus"),
+                        "Spider" | "Large Spider" | "Giant Spider" => insert("Spider"),
+                        "Boar" | "Boar (Mounted)" | "Boar (Any)" => insert("Boar (Any)"),
+                        _ => insert(&race),
+                    }
+                }
+            }
+        }
+        info!("---------------------------------------------------------");
+        for (racekey, anim_events) in events {
+            let target_folder = map_race_to_folder(racekey)
+                .expect(format!("Cannot find folder for RaceKey {}", racekey).as_str());
+            let path = root_dir.join(format!(
+                "meshes\\actors\\{}\\animations\\{}",
+                target_folder, self.pack_name
+            ));
+            let crt = &target_folder[target_folder
+                .find('\\')
+                .and_then(|w| Some(w + 1))
+                .unwrap_or(0)..];
+            fs::create_dir_all(&path)?;
+
+            let create = |file_path: PathBuf| -> Result<(), std::io::Error> {
+                let name = file_path.to_str().unwrap_or("NONE".into()).to_string();
+                let file = fs::File::create(file_path)?;
+                let mut file = BufWriter::new(file);
+                info!(
+                    "Adding {} lines to race {} |||||| file: {}",
+                    anim_events.len(),
+                    racekey,
+                    name
+                );
+                for anim_event in anim_events {
+                    writeln!(file, "{}", anim_event)?;
+                }
+                Ok(())
+            };
+            match crt {
+                "character" => create(path.join(format!("FNIS_{}_List.txt", self.pack_name))),
+                "canine" => match racekey {
+                    "Canine" => {
+                        create(path.join(format!("FNIS_{}_canine_List.txt", self.pack_name)))
+                    }
+                    "Dog" => create(path.join(format!("FNIS_{}_dog_List.txt", self.pack_name))),
+                    _ => create(path.join(format!("FNIS_{}_wolf_List.txt", self.pack_name))),
+                },
+                _ => create(path.join(format!("FNIS_{}_{}_List.txt", self.pack_name, crt))),
+            }?;
+        }
+        info!("---------------------------------------------------------");
+        Ok(())
     }
 }
 

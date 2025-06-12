@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::vec;
 
+use crate::project::scene::Scene;
+
 use super::{position::Position, serialize::EncodeBinary, NanoID};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -20,11 +22,18 @@ pub struct Extra {
 }
 
 impl Stage {
-    pub fn from_count(count: usize) -> Self {
-        let mut ret = Self::default();
-        ret.positions = vec![Default::default(); count];
-
-        ret
+    pub fn new(parent_scene: &Scene) -> Self {
+        let stage = parent_scene.stages.last();
+        Self {
+            id: NanoID::new_nanoid(),
+            name: Default::default(),
+            positions: stage.map_or_else(
+                || vec![Position::new(None); parent_scene.positions.len()],
+                |s| s.positions.iter().map(|p| Position::new(Some(p))).collect(),
+            ),
+            tags: parent_scene.tags.clone(),
+            extra: Default::default(),
+        }
     }
 
     pub fn import_offset(&mut self, yaml_obj: &serde_yaml::Sequence) -> Result<(), String> {
@@ -62,11 +71,11 @@ impl Stage {
 
 impl EncodeBinary for Stage {
     fn get_byte_size(&self) -> usize {
-        self.id.get_byte_size() +
-            self.positions.get_byte_size() +
-            self.extra.fixed_len.get_byte_size() +
-            self.extra.nav_text.get_byte_size() +
-            self.tags.get_byte_size()
+        self.id.get_byte_size()
+            + self.positions.get_byte_size()
+            + self.extra.fixed_len.get_byte_size()
+            + self.extra.nav_text.get_byte_size()
+            + self.tags.get_byte_size()
     }
 
     fn write_byte(&self, buf: &mut Vec<u8>) -> () {
@@ -90,17 +99,5 @@ impl EncodeBinary for Stage {
 impl PartialEq for Stage {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
-    }
-}
-
-impl Default for Stage {
-    fn default() -> Self {
-        Self {
-            id: NanoID::new_nanoid(),
-            name: Default::default(),
-            positions: vec![Position::default()],
-            tags: Default::default(),
-            extra: Default::default(),
-        }
     }
 }

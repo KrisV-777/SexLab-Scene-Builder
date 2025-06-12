@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use super::serialize::{EncodeBinary, deserialize_vec_or_string};
-use crate::project::{define::{Offset, Sex, Stripping}, position_info::PositionInfo};
+use super::serialize::{deserialize_vec_or_string, EncodeBinary};
+use crate::project::{
+    define::{Offset, Sex, Stripping},
+    position_info::PositionInfo,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Position {
@@ -10,9 +13,9 @@ pub struct Position {
     pub anim_obj: String,
     pub offset: Offset,
     pub strip_data: Stripping,
-    #[serde(default)]   // addition 2.0
+    #[serde(default)] // addition 2.0
     pub climax: bool,
-    #[serde(default)]   // addition 2.0
+    #[serde(default)] // addition 2.0
     pub tags: Vec<String>,
 
     // Unused fields, but kept for compatibility
@@ -29,12 +32,30 @@ pub struct Position {
 }
 
 impl Position {
+    pub fn new(reference: Option<&Position>) -> Self {
+        Self {
+            event: Default::default(),
+            offset: reference.map_or_else(|| Offset::default(), |pos| pos.offset.clone()),
+            anim_obj: reference.map_or_else(|| String::new(), |pos| pos.anim_obj.clone()),
+            strip_data: reference.map_or_else(|| Stripping::default(), |p| p.strip_data.clone()),
+            climax: false,
+            tags: Default::default(),
+            // Unused fields
+            sex: Default::default(),
+            race: "Human".into(),
+            schlong: Default::default(),
+            extra: Default::default(),
+            scale: 1.0,
+        }
+    }
+
     pub fn import_offset(&mut self, yaml_obj: &serde_yaml::Mapping) -> Result<(), String> {
         let loc = yaml_obj[&"Location".into()]
             .as_sequence()
             .ok_or("Location is not a sequence")?
             .iter()
-            .filter_map(|it| it.as_f64()).collect::<Vec<_>>();
+            .filter_map(|it| it.as_f64())
+            .collect::<Vec<_>>();
         if loc.len() != 3 {
             return Err(format!(
                 "Invalid location vector, expected length 3 but got {}",
@@ -76,11 +97,11 @@ impl Position {
 impl EncodeBinary for Position {
     fn get_byte_size(&self) -> usize {
         assert!(!self.event.is_empty(), "Event list should not be empty");
-        self.event.first().map_or(0, |e| e.get_byte_size()) +
-            self.climax.get_byte_size() +
-            self.offset.get_byte_size() +
-            self.strip_data.get_byte_size() +
-            self.tags.get_byte_size()
+        self.event.first().map_or(0, |e| e.get_byte_size())
+            + self.climax.get_byte_size()
+            + self.offset.get_byte_size()
+            + self.strip_data.get_byte_size()
+            + self.tags.get_byte_size()
     }
 
     fn write_byte(&self, buf: &mut Vec<u8>) -> () {
@@ -93,25 +114,6 @@ impl EncodeBinary for Position {
         self.tags.write_byte(buf);
     }
 }
-
-impl Default for Position {
-    fn default() -> Self {
-        Self {
-            sex: Default::default(),
-            race: "Human".into(),
-            event: Default::default(),
-            climax: false,
-            scale: 1.0,
-            extra: Default::default(),
-            offset: Default::default(),
-            anim_obj: Default::default(),
-            strip_data: Default::default(),
-            schlong: Default::default(),
-            tags: Default::default(),
-        }
-    }
-}
-
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Extra {

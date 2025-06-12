@@ -423,7 +423,7 @@ async fn open_stage_editor<R: Runtime>(
         &app,
         EditorPayload {
             scene: active_scene.id.clone(),
-            stage: stage.unwrap_or_default(),
+            stage: stage.unwrap_or(Stage::new(&active_scene)),
             positions: active_scene.positions.clone(),
         },
     );
@@ -480,7 +480,7 @@ struct PositionPayload {
 #[tauri::command]
 fn make_position() -> PositionPayload {
     PositionPayload {
-        position: Position::default(),
+        position: Position::new(None),
         info: PositionInfo::default(),
     }
 }

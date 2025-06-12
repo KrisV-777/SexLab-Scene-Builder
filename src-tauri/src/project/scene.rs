@@ -22,6 +22,8 @@ pub struct Scene {
     pub private: bool,
 
     #[serde(default)] // addition 2.0
+    pub tags: Vec<String>,
+    #[serde(default)] // addition 2.0
     pub positions: Vec<PositionInfo>,
     #[serde(default)] // addition 1.1
     pub has_warnings: bool,
@@ -99,8 +101,9 @@ impl Default for Scene {
             graph: Default::default(),
             furniture: Default::default(),
             private: Default::default(),
+            tags: Default::default(),
             positions: vec![PositionInfo::default(); 1], // Default to one position
-            has_warnings: Default::default(),
+            has_warnings: false,
         }
     }
 }

@@ -13,6 +13,7 @@ use tauri_plugin_dialog::DialogExt;
 use crate::{
     project::{
         define::{Node, Sex},
+        position::Position,
         serialize::{make_fnis_lines, map_race_to_folder},
     },
     racekeys::map_legacy_to_racekey,
@@ -197,13 +198,13 @@ impl Package {
 
                 if scene.stages.is_empty() {
                     for _ in 0..events.len() {
-                        scene.stages.push(Default::default());
+                        scene.stages.push(Stage::new(&scene));
                     }
                     if scene.stages.is_empty() {
                         return Err("Scene has no stages".into());
                     }
                     for stage in &mut scene.stages {
-                        stage.positions = vec![Default::default(); actors.len()];
+                        stage.positions = vec![Position::new(None); actors.len()];
                     }
                 }
                 for (i, evt) in events.iter().enumerate() {

@@ -4,6 +4,8 @@ import { readTextFile, readDir } from "@tauri-apps/plugin-fs";
 import { resourceDir } from '@tauri-apps/api/path';
 import { invoke } from "@tauri-apps/api/core"
 import { useImmer } from "use-immer";
+import CheckboxEx from "../components/CheckboxEx";
+import RaceSelect from "../components/RaceSelect";
 import './PositionField.css'
 
 const StripOptions = [
@@ -54,45 +56,20 @@ const makeStrips = (list) => {
   }
 };
 
-const readExtraOptions = async () => {
-  try {
-    const resourceDirPath = (await resourceDir()) + "User\\Position";
-    const entries = await readDir(resourceDirPath, { recursive: false })
-    let ret = [];
-    for (const entry of entries) {
-      const file = await readTextFile(entry.path);
-      const list = file.split(/[,\s]+/);
-      ret = list.filter((value, i) => {
-        if (!value) return false;
-        const upperV = value.toUpperCase();
-        return ret.findIndex(it => it.value.toUpperCase() === upperV) === -1 &&
-          list.findIndex(it => it.toUpperCase() === upperV) === i
-      })
-        .map(value => { return { value: value, label: value }; })
-        .concat(ret);
-    }
-    // console.log(ret);
-    return ret;
-  } catch (error) {
-    console.log(error);
-    return [];
-  }
-};
 const PositionField = forwardRef(function PositionField({ _position, _info }, ref) {
   // Scene Position fields
   const [sex, updateSex] = useImmer(_info.sex);
   const [race, setRace] = useState(_info.race);
+  const [raceKeys, setRaceKeys] = useState([]);
   const [scale, setScale] = useState(_info.scale);
   const [extra, updateExtra] = useImmer({ submissive: _info.submissive, vampire: _info.vampire, dead: _info.dead, });
   // Stage Position fields
   // COMEBACK: offset & strip data copied from earlier stages?
   const [event, updateEvent] = useImmer(_position.event);
   const [climax, setClimax] = useState(_position.climax);
-  const [offset, updateOffset] = useImmer(/* _control && _control.offset || */ _position.offset);
+  const [offset, updateOffset] = useImmer(_position.offset);
   const [anim_obj, setAnimObj] = useState(_position.anim_obj);
-  const [strips, updateStrips] = useImmer(getStrips(/* _control && _control.strip_data || */ _position.strip_data))
-  const [extraOptions, setExtraOptions] = useState([]);
-  const [raceKeys, setRaceKeys] = useState([]);
+  const [strips, updateStrips] = useImmer(getStrips(_position.strip_data))
   const [basicAnim, setBasicAnim] = useState(true);
   const [workingAnim, setWorkingAnim] = useState(undefined);
   const [sequenceOpen, setSequenceOpen] = useState(false);
@@ -100,7 +77,6 @@ const PositionField = forwardRef(function PositionField({ _position, _info }, re
 
   useEffect(() => {
     invoke('get_race_keys').then(result => setRaceKeys(result));
-    // readExtraOptions().then(result => setExtraOptions(result));
   }, []);
 
   useImperativeHandle(ref, () => {
@@ -127,18 +103,6 @@ const PositionField = forwardRef(function PositionField({ _position, _info }, re
       }
     };
   });
-
-  function CheckboxEx({ obj, label, disabled, attr, updateFunc }) {
-    return (
-      <Checkbox
-        onChange={(e) => { updateFunc(prev => { prev[attr] = e.target.checked }) }}
-        checked={obj[attr] && !disabled}
-        disabled={disabled || false}
-      >
-        {label}
-      </Checkbox>
-    );
-  }
 
   const makeSequenceMenu = (events) => {
     let sequences = [];
@@ -200,24 +164,14 @@ const PositionField = forwardRef(function PositionField({ _position, _info }, re
       <Row gutter={[2, 2]}>
         <Col span={8}> {/* Race */}
           <Card className="position-attribute-card" title={'Race'}>
-            <Select
-              className="position-race-select"
-              defaultValue={race}
-              showSearch
-              placeholder="Position race"
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                (option?.label ?? '').includes(input)
-              }
-              filterSort={(optionA, optionB) =>
-                (optionA?.label ?? '')
-                  .toLowerCase()
-                  .localeCompare((optionB?.label ?? '').toLowerCase())
-              }
-              options={raceKeys.map((race, i) => {
-                return { value: race, label: race };
-              })}
+            <RaceSelect
+              race={race}
               onSelect={(e) => {
+                if (e !== 'Human') {
+                  updateSex((prev) => {
+                    prev.futa = false;
+                  });
+                }
                 setRace(e);
               }}
             />
@@ -424,7 +378,6 @@ const PositionField = forwardRef(function PositionField({ _position, _info }, re
                     updateTags(prev => { prev.splice(idx, 1); });
                   }
                 }}
-                options={extraOptions}
                 maxTagTextLength={10}
                 maxTagCount={3}
               />

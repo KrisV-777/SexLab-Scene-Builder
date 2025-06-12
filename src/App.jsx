@@ -15,13 +15,15 @@ const { Header, Content, Footer, Sider } = Layout;
 const { confirm } = Modal;
 import { STAGE_EDGE, STAGE_EDGE_SHAPEID } from "./scene/SceneEdge"
 import { Furnitures } from "./common/Furniture";
-import PositionField from "./stage/PositionField";
 import "./scene/SceneNode"
 import "./App.css";
 import "./Dark.css";
+import ScenePosition from "./scene/ScenePosition";
 function makeMenuItem(label, key, icon, children, disabled, danger) {
   return { key, icon, children, label, disabled, danger };
 }
+import { tagsSFW, tagsNSFW } from "./common/Tags"
+import TagTree from "./components/TagTree";
 
 const ZOOM_OPTIONS = { minScale: 0.25, maxScale: 5 };
 
@@ -758,6 +760,7 @@ function App() {
                 //   overflow: "auto",
                 // }}
                 >
+                  {/* TODO: Only one card can be displayed here, but Furniture & Tag information would probably want to be separated somehow */}
                   <Card
                     className="sceneTags-attribute-card"
                     bordered={false}
@@ -765,7 +768,31 @@ function App() {
                     extra={
                       <Tooltip
                         className="tool-tip"
-                        title={"To Do write a description of what this does"}
+                        title={"Tags which are shared between all stages in the scene."}
+                      >
+                        <Button type="link">Info</Button>
+                      </Tooltip>
+                    }
+                  >
+                    <TagTree
+                      tags={activeScene ? activeScene.tags : []}
+                      onChange={(tags) => {
+                        updateActiveScene((prev) => {
+                          prev.tags = tags;
+                        });
+                        setEdited(true);
+                      }}
+                      tagsSFW={activeScene ? tagsSFW : []}
+                      tagsNSFW={activeScene ? tagsNSFW : []}
+                    />
+                  </Card>
+                  <Card
+                    bordered={false}
+                    title={"Furniture"}
+                    extra={
+                      <Tooltip
+                        className="tool-tip"
+                        title={"Furniture settings for the scene."}
                       >
                         <Button type="link">Info</Button>
                       </Tooltip>
@@ -942,11 +969,11 @@ function App() {
               <Card
                 className="sceneTagsPositions-card"
                 bordered={false}
-                title={"Scene Tags"}
+                title="Scene Positions"
                 extra={
                   <Tooltip
                     className="tool-tip"
-                    title={"To Do write a description of what Scene Tags do"}
+                    title={"Position Date shared between all stages in the scene."}
                   >
                     <Button type="link">Info</Button>
                   </Tooltip>
@@ -954,7 +981,19 @@ function App() {
               >
                 <Space direction="vertical" style={{ width: "100%" }}>
                   <div style={{ height: "98%" }}>
-                    Add Tags Here
+                    {activeScene && activeScene.positions.map((pos, idx) => (
+                      <Col key={idx} span={8}>
+                        <ScenePosition
+                          position={pos}
+                          onChange={(newPos) => {
+                            updateActiveScene((prev) => {
+                              prev.positions[idx] = newPos;
+                            });
+                            setEdited(true);
+                          }}
+                        />
+                      </Col>
+                    ))}
                   </div>
                 </Space>
               </Card>

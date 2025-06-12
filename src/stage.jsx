@@ -8,6 +8,7 @@ import { Input, Button, Tag, Space, Tooltip, InputNumber, Card, Layout, Divider,
 
 import { tagsSFW, tagsNSFW } from "./common/Tags"
 import PositionField from "./stage/PositionField";
+import TagTree from "./components/TagTree";
 import "./stage.css";
 import "./Dark.css";
 
@@ -24,12 +25,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       <React.StrictMode>
         <Editor
           key={`Editor-${stage.id}`}
-          _scene_id={scene}
-          _id={stage.id}
-          _name={stage.name}
+          _sceneId={scene}
+          _stage={stage}
           _positions={merged}
-          _tags={stage.tags}
-          _extra={stage.extra}
         />
       </React.StrictMode>
     );
@@ -52,28 +50,17 @@ function makePositionTab(p, i) {
   return { key: `PTab${i}`, position: p.position, info: p.info }
 }
 
-function Editor({ _scene_id, _id, _name, _positions, _tags, _extra }) {
+function Editor({ _sceneId, _stage, _positions }) {
   const [api, contextHolder] = notification.useNotification();
 
-  const [name, setName] = useState(_name);
+  const [name, setName] = useState(_stage.name);
   const [positions, updatePositions] = useImmer(_positions.map((p, i) => { return makePositionTab(p, i) }));
   const [activePosition, setActivePosition] = useState(positions[0].key);
   const positionRefs = useRef([]);
   const positionIdx = useRef(_positions.length);
-  const [tagTree, _] = useImmer([
-    ...[['tagsSFW', 'SFW', tagsSFW], ['tagsNSFW', 'NSFW', tagsNSFW]].map(
-      ([value, title, tags]) => ({
-        value,
-        title,
-        selectable: false,
-        children: tags.map(tag => ({ value: tag, title: tag })),
-      })
-    ),
-  ]);
-  const [tags, updateTags] = useImmer(_tags || []);
-  const [customTag, setCustomTag] = useState('');
-  const [fixedLen, setFixedLen] = useState(_extra.fixed_len);
-  const [navText, setNavText] = useState(_extra.nav_text);
+  const [tags, setTags] = useState(_stage.tags);
+  const [fixedLen, setFixedLen] = useState(_stage.extra.fixed_len);
+  const [navText, setNavText] = useState(_stage.extra.nav_text);
 
   useEffect(() => {
     const toggleDarkMode = (toEnabled) => {
@@ -124,7 +111,7 @@ function Editor({ _scene_id, _id, _name, _positions, _tags, _extra }) {
       return;
     }
     const stage = {
-      id: _id,
+      id: _stage.id,
       name,
       positions: position_arg,
       tags,
@@ -133,8 +120,8 @@ function Editor({ _scene_id, _id, _name, _positions, _tags, _extra }) {
         nav_text: navText || '',
       },
     };
-    console.log("Saving Stage... ", _scene_id, positions_info, stage);
-    invoke('stage_save_and_close', { scene: _scene_id, positions: positions_info, stage });
+    console.log("Saving Stage... ", _sceneId, positions_info, stage);
+    invoke('stage_save_and_close', { scene: _sceneId, positions: positions_info, stage });
   }
 
   const onPositionTabEdit = (targetKey, action) => {
@@ -157,21 +144,6 @@ function Editor({ _scene_id, _id, _name, _positions, _tags, _extra }) {
     }
   };
 
-  const addCustomTags = () => {
-    const add = customTag.split(',');
-    updateTags(prev => {
-      add.forEach(tag => {
-        tag = tag.trim();
-        const s = tag.toLowerCase().replace(/\s+/g, '');
-        if (!s || tags.find(t => t.toLowerCase().replace(/\s+/g, '') === s))
-          return;
-        prev.push(tag);
-      });
-      return prev;
-    });
-    setCustomTag('');
-  }
-
   const positionsCollapsed = [
     { // Tags
       key: '1',
@@ -179,69 +151,11 @@ function Editor({ _scene_id, _id, _name, _positions, _tags, _extra }) {
       extra: <TagsOutlined />,
       children:
         <div className="tag-display-box">
-          <TreeSelect
-            className="tag-display-field"
-            size="large"
-            multiple
-            placeholder="Please Select Tags"
-            allowClear
-            value={tags}
-            onSelect={(e) => {
-              updateTags((prev) => {
-                prev.push(e);
-              });
-            }}
-            onClear={() => {
-              updateTags([]);
-            }}
-            dropdownRender={(menu) => (
-              <>
-                {menu}
-                <Divider style={{ margin: '8px 0' }} />
-                <Space.Compact style={{ width: '100%' }}>
-                  <Input
-                    value={customTag}
-                    onChange={(e) => setCustomTag(e.target.value)}
-                    placeholder="Custom Tag A, Custom Tag B"
-                    onPressEnter={addCustomTags}
-                  />
-                  <Button type="primary" onClick={addCustomTags}>
-                    Add
-                  </Button>
-                </Space.Compact>
-              </>
-            )}
-            maxTagTextLength={20}
-            tagRender={({ label, value, closable, onClose }) => {
-              const search = value.toLowerCase();
-              let color = tagsSFW.find((it) => it.toLowerCase() === search)
-                ? 'cyan'
-                : tagsNSFW.find((it) => it.toLowerCase() === search)
-                  ? 'volcano'
-                  : undefined;
-
-              const onPreventMouseDown = (evt) => {
-                evt.preventDefault();
-                evt.stopPropagation();
-              };
-              const onCloseEx = () => {
-                updateTags((prev) => prev.filter((tag) => tag !== value));
-                onClose();
-              };
-              return (
-                <Tag
-                  color={color}
-                  onMouseDown={onPreventMouseDown}
-                  closable={closable}
-                  onClose={onCloseEx}
-                  style={{ margin: 2 }}
-                >
-                  {label}
-                </Tag>
-              );
-            }}
-            treeData={tagTree}
-            treeExpandAction={'click'}
+          <TagTree
+            tags={tags}
+            onChange={setTags}
+            tagsSFW={tagsSFW}
+            tagsNSFW={tagsNSFW}
           />
         </div>
     },
@@ -305,7 +219,7 @@ function Editor({ _scene_id, _id, _name, _positions, _tags, _extra }) {
                   showCount
                   rows={3}
                   style={{ resize: 'none', width: '100%' }}
-                  defaultValue={_extra.navText}
+                  defaultValue={_stage.extra.navText}
                   value={navText}
                   onChange={(e) => setNavText(e.target.value)}
                 ></TextArea>
@@ -330,7 +244,7 @@ function Editor({ _scene_id, _id, _name, _positions, _tags, _extra }) {
                   controls
                   precision={0}
                   step={10}
-                  defaultValue={_extra.fixedLen}
+                  defaultValue={_stage.extra.fixedLen}
                   min={0}
                   value={fixedLen ? fixedLen : undefined}
                   onChange={(e) => setFixedLen(e)}
@@ -359,7 +273,7 @@ function Editor({ _scene_id, _id, _name, _positions, _tags, _extra }) {
               bordered={false}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              defaultValue={_name}
+              defaultValue={_stage.name}
               placeholder={'Stage Name'}
               onFocus={(e) => e.target.select()}
             />

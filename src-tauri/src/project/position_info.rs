@@ -1,9 +1,8 @@
-use serde::{Deserialize, Serialize};
-use std::mem::size_of;
 use super::serialize::EncodeBinary;
 use crate::project::define::Sex;
 use crate::racekeys::get_race_key_bytes;
-
+use serde::{Deserialize, Serialize};
+use std::mem::size_of;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PositionInfo {
@@ -17,34 +16,33 @@ pub struct PositionInfo {
 
 impl EncodeBinary for PositionInfo {
     fn get_byte_size(&self) -> usize {
-      self.sex.get_byte_size() +
+        self.sex.get_byte_size() +
         self.race.get_byte_size() +
         size_of::<bool>() * 3 + // submissive, vampire, dead
         size_of::<f32>() // scale
     }
 
     fn write_byte(&self, buf: &mut Vec<u8>) -> () {
-      buf.push(get_race_key_bytes(&self.race).unwrap());
-      self.sex.write_byte(buf);
-      self.scale.write_byte(buf);
-      buf.push(
-        (1 << 0) * self.submissive as u8 +
-        (1 << 1) * self.vampire as u8 +
-        (1 << 2) * self.dead as u8,
-      );
+        buf.push(get_race_key_bytes(&self.race).unwrap());
+        self.sex.write_byte(buf);
+        self.scale.write_byte(buf);
+        buf.push(
+            (1 << 0) * self.submissive as u8
+                + (1 << 1) * self.vampire as u8
+                + (1 << 2) * self.dead as u8,
+        );
     }
 }
 
 impl Default for PositionInfo {
     fn default() -> Self {
         PositionInfo {
-          sex: Default::default(),
-          race: String::from("Human"),
-          scale: 1.0,
-          submissive: false,
-          vampire: false,
-          dead: false
+            sex: Default::default(),
+            race: String::from("Human"),
+            scale: 1.0,
+            submissive: false,
+            vampire: false,
+            dead: false,
         }
-      }
     }
-
+}

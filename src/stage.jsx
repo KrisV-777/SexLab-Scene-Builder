@@ -82,6 +82,26 @@ function Editor({ _sceneId, _stage, _positions }) {
     }
   }, []);
 
+  useEffect(() => {
+    const position_remove = listen('on_position_remove', (event) => {
+      const { sceneId, positionIdx } = event.payload;
+      if (sceneId !== _sceneId) return;
+      updatePositions(p => { p.splice(positionIdx, 1) });
+      if (positionRefs.current[positionIdx]) {
+        positionRefs.current.splice(positionIdx, 1);
+      }
+    });
+    const position_add = listen('on_position_add', (event) => {
+      const { sceneId, position } = event.payload;
+      if (sceneId !== _sceneId) return;
+      updatePositions(prev => { prev.push(position) });
+    });
+    return () => {
+      position_remove.then(res => { res() });
+      position_add.then(res => { res() });
+    }
+  }, []);
+
   function saveAndReturn() {
     let errors = false;
     let position_arg = [];
@@ -128,8 +148,9 @@ function Editor({ _sceneId, _stage, _positions }) {
     if (action === 'add') {
       invoke('make_position').then((res) => {
         const next = makePositionTab(res, positionIdx.current++);
-        updatePositions(p => { p.push(next) });
-        setActivePosition(next.key);
+        emit('on_position_add', { sceneId: _sceneId, position: next }).then(() => {
+          setActivePosition(next.key);
+        });
       });
     } else {
       const id = positions.findIndex(v => v.key === targetKey);
@@ -137,10 +158,7 @@ function Editor({ _sceneId, _stage, _positions }) {
         const newidx = id > 0 ? id - 1 : 1;
         setActivePosition(positions[newidx].key);
       }
-      updatePositions(p => { p.splice(id, 1) });
-      if (positionRefs.current[id]) {
-        positionRefs.current.splice(id, 1);
-      }
+      emit('on_position_remove', { sceneId: _sceneId, positionIdx: id });
     }
   };
 

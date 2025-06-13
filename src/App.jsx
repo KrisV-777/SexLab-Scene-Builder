@@ -24,6 +24,7 @@ function makeMenuItem(label, key, icon, children, disabled, danger) {
 }
 import { tagsSFW, tagsNSFW } from "./common/Tags"
 import TagTree from "./components/TagTree";
+import { remove } from "@tauri-apps/plugin-fs";
 
 const ZOOM_OPTIONS = { minScale: 0.25, maxScale: 5 };
 
@@ -201,7 +202,7 @@ function App() {
   // Stage & Scene update
   useEffect(() => {
     // Callback after stage has been saved in other window
-    const unlisten = listen('on_stage_saved', (event) => {
+    const stage_save = listen('on_stage_saved', (event) => {
       const { scene, positions, stage } = event.payload;
       console.log("Saving new stage in ", scene, positions, stage);
       const updatingActiveScene = scenes.length === 0 || activeScene.id === scene;
@@ -246,11 +247,56 @@ function App() {
         });
       }
     });
+    const position_remove = listen('on_position_remove', (event) => {
+      const { sceneId, positionIdx } = event.payload;
+      console.log("Removing position", positionIdx, "from scene", sceneId);
+      const remove_position = (scene) => {
+        for (const stage of scene.stages) {
+          if (positionIdx < 0 || positionIdx >= stage.positions.length) {
+            console.error("Position index out of bounds for stage", stage.id, "in scene", sceneId);
+            continue;
+          };
+          stage.positions.splice(positionIdx, 1);
+        }
+        scene.has_warnings = true;
+      }
+      if (scenes.length === 0 || activeScene.id === scene) {
+        updateActiveScene(remove_position);
+      } else {
+        updateScenes(prev => {
+          const idx = prev.findIndex(it => it.id === sceneId);
+          if (idx === -1) return;
+          remove_position(prev[idx]);
+        });
+      }
+    });
+    const position_add = listen('on_position_add', (event) => {
+      const { sceneId, position } = event.payload;
+      console.log("Adding position", position, "to scene", sceneId);
+      const add_position = (scene) => {
+        for (const stage of scene.stages) {
+          stage.positions.push(position.position);
+        }
+        scene.positions.push(position.info);
+        scene.has_warnings = true;
+      }
+      if (scenes.length === 0 || activeScene.id === sceneId) {
+        updateActiveScene(add_position(prev));
+      } else {
+        updateScenes(prev => {
+          const idx = prev.findIndex(it => it.id === sceneId);
+          if (idx === -1) return;
+          add_position(prev[idx]);
+        });
+      }
+    });
     return () => {
       console.log("Active before update:", activeScene);
-      unlisten.then(res => { res() });
+      stage_save.then(res => { res() });
+      position_remove.then(res => { res() });
+      position_add.then(res => { res() });
     }
-  }, [graph, activeScene])
+  }, [graph, activeScene, scenes])
 
   useEffect(() => {
     if (!graph) return;

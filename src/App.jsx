@@ -60,6 +60,10 @@ function App() {
     }
   }, []);
 
+function generatePositionId() {
+  return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
   // Graph
   useEffect(() => {
     const newGraph = new Graph({
@@ -250,43 +254,49 @@ function App() {
     const position_remove = listen('on_position_remove', (event) => {
       const { sceneId, positionIdx } = event.payload;
       console.log("Removing position", positionIdx, "from scene", sceneId);
+
       const remove_position = (scene) => {
-        for (const stage of scene.stages) {
-          if (positionIdx < 0 || positionIdx >= stage.positions.length) {
-            console.error("Position index out of bounds for stage", stage.id, "in scene", sceneId);
-            continue;
-          };
-          stage.positions.splice(positionIdx, 1);
-        }
-        scene.has_warnings = true;
-      }
-      if (scenes.length === 0 || activeScene.id === scene) {
-        updateActiveScene(remove_position);
+          // Remove from each stage
+          scene.stages.forEach(stage => {
+            if (positionIdx >= 0 && positionIdx < stage.positions.length) {
+              stage.positions = stage.positions.filter((_, idx) => idx !== positionIdx);
+            }
+          });
+          // Remove from scene.positions
+          scene.positions = scene.positions.filter((_, idx) => idx !== positionIdx);
+          scene.has_warnings = true;
+      };
+      if (scenes.length === 0 || activeScene.id === sceneId) {
+        updateActiveScene(draft => remove_position(draft));
       } else {
-        updateScenes(prev => {
-          const idx = prev.findIndex(it => it.id === sceneId);
+        updateScenes(draft => {
+          const idx = draft.findIndex(it => it.id === sceneId);
           if (idx === -1) return;
-          remove_position(prev[idx]);
+          remove_position(draft[idx]);
         });
       }
     });
     const position_add = listen('on_position_add', (event) => {
       const { sceneId, position } = event.payload;
       console.log("Adding position", position, "to scene", sceneId);
+
       const add_position = (scene) => {
-        for (const stage of scene.stages) {
-          stage.positions.push(position.position);
-        }
-        scene.positions.push(position.info);
+        // Always clone and assign a unique id
+        const newPosition = { ...position.info, id: generatePositionId() };
+        scene.stages.forEach(stage => {
+          stage.positions.push({ ...position.position, id: generatePositionId() });
+        });
+        scene.positions.push(newPosition);
         scene.has_warnings = true;
-      }
+      };
+
       if (scenes.length === 0 || activeScene.id === sceneId) {
-        updateActiveScene(add_position(prev));
+        updateActiveScene(draft => add_position(draft));
       } else {
-        updateScenes(prev => {
-          const idx = prev.findIndex(it => it.id === sceneId);
+        updateScenes(draft => {
+          const idx = draft.findIndex(it => it.id === sceneId);
           if (idx === -1) return;
-          add_position(prev[idx]);
+          add_position(draft[idx]);
         });
       }
     });
@@ -1028,12 +1038,12 @@ function App() {
                 <Space direction="vertical" style={{ width: "100%" }}>
                   <div style={{ height: "98%" }}>
                     {activeScene && activeScene.positions.map((pos, idx) => (
-                      <Col key={idx} span={8}>
+                      <Col key={pos.id || idx} span={8}>
                         <ScenePosition
                           position={pos}
                           onChange={(newPos) => {
-                            updateActiveScene((prev) => {
-                              prev.positions[idx] = newPos;
+                            updateActiveScene(draft => {
+                              draft.positions[idx] = { ...newPos, id: pos.id || generatePositionId() };
                             });
                             setEdited(true);
                           }}

@@ -10,10 +10,15 @@ function ScenePosition({ position, onChange }) {
   const [sex, updateSex] = useImmer(position.sex);
   const [race, setRace] = useState(position.race);
   const [scale, setScale] = useState(position.scale);
-  const [extra, updateExtra] = useImmer({ submissive: position.submissive, vampire: position.vampire, dead: position.dead, });
+  const [extra, updateExtra] = useImmer({ 
+    submissive: position.submissive, 
+    vampire: position.vampire, 
+    dead: position.dead, 
+  });
 
   useEffect(() => {
     onChange({
+      ...position,
       sex,
       race,
       scale,

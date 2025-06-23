@@ -122,10 +122,8 @@ function PositionField({ position, info, onChange }) {
               {['male', 'female', 'futa'].map(attr => (
                 <Checkbox
                   key={attr}
-                  onChange={e => onChange(
-                    position,
-                    { ...info, sex: { ...info.sex, [attr]: e.target.checked, } }
-                  )}
+                  onChange={e => onChange(position, { ...info, sex: { ...info.sex, [attr]: e.target.checked, } })}
+                  disabled={attr === 'futa' && info.race !== 'Human'}
                   checked={info.sex[attr]}
                 >
                   {attr.charAt(0).toUpperCase() + attr.slice(1)}

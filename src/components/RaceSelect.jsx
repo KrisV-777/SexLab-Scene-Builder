@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Select } from "antd";
 import { invoke } from "@tauri-apps/api/core"
 
-function RaceSelect({ race, onSelect }) {
+function RaceSelect({ race, onSelect, ...raceSelectProps }) {
   const [raceKeys, setRaceKeys] = useState([]);
 
   useEffect(() => {
@@ -30,6 +30,7 @@ function RaceSelect({ race, onSelect }) {
       onSelect={(value) => {
         onSelect(value);
       }}
+      {...raceSelectProps}
     />
   );
 }

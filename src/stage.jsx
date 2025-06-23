@@ -56,7 +56,6 @@ function Editor({ _sceneId, _stage, _positions }) {
   const [name, setName] = useState(_stage.name);
   const [positions, updatePositions] = useImmer(_positions.map((p, i) => { return makePositionTab(p, i) }));
   const [activePosition, setActivePosition] = useState(positions[0].key);
-  const positionRefs = useRef([]);
   const positionIdx = useRef(_positions.length);
   const [tags, setTags] = useState(_stage.tags);
   const [fixedLen, setFixedLen] = useState(_stage.extra.fixed_len);
@@ -87,34 +86,37 @@ function Editor({ _sceneId, _stage, _positions }) {
       const { sceneId, positionIdx } = event.payload;
       if (sceneId !== _sceneId) return;
       updatePositions(p => { p.splice(positionIdx, 1) });
-      if (positionRefs.current[positionIdx]) {
-        positionRefs.current.splice(positionIdx, 1);
-      }
     });
     const position_add = listen('on_position_add', (event) => {
       const { sceneId, position } = event.payload;
       if (sceneId !== _sceneId) return;
       updatePositions(prev => { prev.push(position) });
     });
+    const position_change = listen('on_position_change', (event) => {
+      const { sceneId, stageId, positionIdx, info } = event.payload;
+      if (sceneId !== _sceneId || stageId === _stage.id) return;
+      console.log("Position Change Event:", info);
+      updatePositions(p => { p[positionIdx].info = info });
+    });
     return () => {
       position_remove.then(res => { res() });
       position_add.then(res => { res() });
+      position_change.then(res => { res() });
     }
   }, []);
 
   function saveAndReturn() {
-    let errors = false;
-    let position_arg = [];
-    let positions_info = [];
-    positions.forEach((p, i) => {
-      const { position: stage_p, info: scene_p } = positionRefs.current[i]?.getData() || p;
+    let positionArg = [];
+    let positionsInfo = [];
+    for (let i = 0; i < positions.length; i++) {
+      const { position: stage_p, info: scene_p } = positions[i];
       if (!stage_p.event[0]) {
         api.error({
           message: 'Missing Event',
           description: `Position ${i + 1} is missing its behavior file (.hkx)`,
           placement: 'bottomLeft',
         });
-        errors = true;
+        return;
       }
       if (!scene_p.sex.male && !scene_p.sex.female && !scene_p.sex.futa) {
         api.error({
@@ -122,26 +124,23 @@ function Editor({ _sceneId, _stage, _positions }) {
           description: `Position ${i + 1} has no sex assigned. Every position should be compatible with at least one sex.`,
           placement: 'bottomLeft',
         });
-        errors = true;
+        return;
       }
-      position_arg.push(stage_p);
-      positions_info.push(scene_p);
-    });
-    if (errors) {
-      return;
+      positionArg.push(stage_p);
+      positionsInfo.push(scene_p);
     }
     const stage = {
       id: _stage.id,
       name,
-      positions: position_arg,
+      positions: positionArg,
       tags,
       extra: {
         fixed_len: fixedLen || 0.0,
         nav_text: navText || '',
       },
     };
-    console.log("Saving Stage... ", _sceneId, positions_info, stage);
-    invoke('stage_save_and_close', { scene: _sceneId, positions: positions_info, stage });
+    console.log("Saving Stage... ", _sceneId, positionsInfo, stage);
+    invoke('stage_save_and_close', { scene: _sceneId, positions: positionsInfo, stage });
   }
 
   const onPositionTabEdit = (targetKey, action) => {
@@ -198,10 +197,19 @@ function Editor({ _sceneId, _stage, _positions }) {
               children: (
                 <div className="position">
                   <PositionField
-                    _position={p.position}
-                    _info={p.info}
-                    ref={(element) => {
-                      positionRefs.current[i] = element;
+                    position={p.position}
+                    info={p.info}
+                    onChange={(newPosition, newInfo) => {
+                      updatePositions((draft) => {
+                        draft[i].position = newPosition;
+                        draft[i].info = newInfo;
+                      });
+                      emit('on_position_change', {
+                        sceneId: _sceneId,
+                        stageId: _stage.id,
+                        positionIdx: i,
+                        info: newInfo,
+                      });
                     }}
                   />
                 </div>

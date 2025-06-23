@@ -60,9 +60,9 @@ function App() {
     }
   }, []);
 
-function generatePositionId() {
-  return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
+  function generatePositionId() {
+    return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
 
   // Graph
   useEffect(() => {
@@ -120,8 +120,7 @@ function generatePositionId() {
         enabled: true,
       }));
 
-    newGraph
-      // Node Events
+    newGraph // Node Events
       .on("node:removed", ({ node }) => {
         if (inEdit.current) return;
         updateActiveScene(prev => {
@@ -256,15 +255,15 @@ function generatePositionId() {
       console.log("Removing position", positionIdx, "from scene", sceneId);
 
       const remove_position = (scene) => {
-          // Remove from each stage
-          scene.stages.forEach(stage => {
-            if (positionIdx >= 0 && positionIdx < stage.positions.length) {
-              stage.positions = stage.positions.filter((_, idx) => idx !== positionIdx);
-            }
-          });
-          // Remove from scene.positions
-          scene.positions = scene.positions.filter((_, idx) => idx !== positionIdx);
-          scene.has_warnings = true;
+        // Remove from each stage
+        scene.stages.forEach(stage => {
+          if (positionIdx >= 0 && positionIdx < stage.positions.length) {
+            stage.positions = stage.positions.filter((_, idx) => idx !== positionIdx);
+          }
+        });
+        // Remove from scene.positions
+        scene.positions = scene.positions.filter((_, idx) => idx !== positionIdx);
+        scene.has_warnings = true;
       };
       if (scenes.length === 0 || activeScene.id === sceneId) {
         updateActiveScene(draft => remove_position(draft));
@@ -300,11 +299,24 @@ function generatePositionId() {
         });
       }
     });
+    const position_change = listen('on_position_change', (event) => {
+      const { sceneId, _, positionIdx, info } = event.payload;
+      // NOTE: Skip position change if the scene is not currently active
+      // If the stage of an inactive scene is saved, the info will be updated accordingly
+      if (scenes.length === 0 || activeScene.id === sceneId) {
+        updateActiveScene(draft => {
+          // Always clone and assign a unique id
+          const newPosition = { ...info, id: generatePositionId() };
+          draft.positions[positionIdx] = newPosition;
+        });
+      }
+    });
     return () => {
       console.log("Active before update:", activeScene);
       stage_save.then(res => { res() });
       position_remove.then(res => { res() });
       position_add.then(res => { res() });
+      position_change.then(res => { res() });
     }
   }, [graph, activeScene, scenes])
 

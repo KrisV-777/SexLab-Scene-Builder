@@ -12,7 +12,7 @@ function RaceSelect({ race, onSelect, ...raceSelectProps }) {
   return (
     <Select
       className="position-race-select"
-      defaultValue={race}
+      value={race}
       showSearch
       placeholder="Race"
       optionFilterProp="children"

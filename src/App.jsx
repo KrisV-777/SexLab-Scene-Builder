@@ -573,6 +573,15 @@ function App() {
   <ConfigProvider
     theme={{
       algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+      token: isDark
+        ? {
+          //Dark Mode Color Overrides
+          colorBgBase: '#001529'
+        }
+      : {
+        // Light Mode Color Overrides
+      }
+
     }}
   >
     <Layout hasSider>
@@ -641,7 +650,7 @@ function App() {
                                   style={edited < 1 ? { display: "none" } : {}}
                                 >
                                   <Tooltip title={"Unsaved changes"}>
-                                    <DiffOutlined />
+                                    <DiffOutlined style={{fontSize: '2em', color: 'red'}} />
                                   </Tooltip>
                                 </div>
                                 <Input
@@ -819,10 +828,6 @@ function App() {
                   minSize={30}
                   defaultSize={30}
                   maxSize={40}
-                  Scroll
-                // style={{
-                //   overflow: "auto",
-                // }}
                 >
                   {/* TODO: Only one card can be displayed here, but Furniture & Tag information would probably want to be separated somehow */}
                   <Card
@@ -853,6 +858,7 @@ function App() {
                   <Card
                     bordered={false}
                     title={"Furniture"}
+                    className="furniture-attribute-card"
                     extra={
                       <Tooltip
                         className="tool-tip"
@@ -864,6 +870,7 @@ function App() {
                   >
                     <Space size={"large"} direction="vertical">
                       <Select
+                      style={{ overflowY: "auto" }}
                         className="graph-furniture-selection"
                         value={
                           activeScene ? activeScene.furniture.furni_types : []
@@ -1029,7 +1036,7 @@ function App() {
             <PanelResizeHandle className="resize-handle-horizontal" />
 
             {/* Bottom Positions Field */}
-            <Panel minSize={15} maxSize={50} id="scenePositions">
+            <Panel minSize={15} maxSize={50} id="scenePositions" style={{ minHeight: "150px" }}>
               <Card
                 className="sceneTagsPositions-card"
                 bordered={false}
@@ -1044,7 +1051,7 @@ function App() {
                 }
               >
                 <Space direction="vertical" style={{ width: "100%" }}>
-                  <div style={{ height: "98%" }}>
+                  <div style={{ }}>
                     {activeScene && activeScene.positions.map((pos, idx) => (
                       <Col key={pos.id || idx} span={24}>
                         <ScenePosition

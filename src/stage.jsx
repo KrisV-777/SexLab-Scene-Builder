@@ -283,8 +283,17 @@ function Editor({ _sceneId, _stage, _positions }) {
   return (
     <ConfigProvider
       theme={{
-        algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
-      }}
+      algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+      token: isDark
+        ? {
+          //Dark Mode Color Overrides
+          colorBgBase: '#001529'
+        }
+      : {
+        // Light Mode Color Overrides
+      }
+
+    }}
     >
       <Layout>
         {contextHolder}

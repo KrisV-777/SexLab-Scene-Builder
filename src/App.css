@@ -16,10 +16,15 @@
 }
 
 body {
-  padding: 0;
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
   margin: 0;
-  font-size: .9em;
+  padding: 0;
+  min-height: 100vh;
+  min-width: 100vw;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-size: 1em;
+  line-height: 1.5;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
 }
 
 h1 {
@@ -41,10 +46,6 @@ label {
   cursor: pointer;
 }
 
-input:focus::-webkit-input-placeholder {
-  /* No color styling */
-}
-
 h1,
 h2,
 h3,
@@ -57,8 +58,15 @@ h1 { font-size: 1.5em; }
 h2 { font-size: 1.4em; }
 h3, h4, h5 { font-size: 1.2em; }
 
+/* Hide duplicate Graph */
 .x6-graph-grid:first-of-type {
   display: none;
+}
+
+/* Set defaults */
+.ant-card-body{
+  display: flex;
+  flex-direction: column;
 }
 
 /* Main Window (Left side) */
@@ -72,38 +80,30 @@ h3, h4, h5 { font-size: 1.2em; }
 
 /* Main Window (Right side) */
 .scene-box {
-  padding-top: 6px;
-  padding-bottom: 6px;
+  padding: 0.5em;
 }
 .scene-box .ant-card-body {
-  height: 92%;
-}
-
-.site-layout {
-  height: 100vh;
+  height: calc(100% - 56px);
 }
 
 #stageNameInputField {
-  margin-right: 5%;
+  margin-right: 0.5em;
 }
 
 .graph-editor-field {
-  height: 100%;
-  width: 100%;
   border: 0px;
 }
 .graph-toolbox, .graph-container, .graph-data-field {
-  width: 100%;
-  margin: 5px;
+  margin: 0.5em;
 }
 
 .graph-toolbox {
-  height: 36px;
-  border-radius: 5px;
+  height: 2.5em;
+  border-radius: 0.5em;
   border-style: solid;
-  padding: 2px;
-  padding-left: 16px;
-  padding-right: 16px;
+  padding: 0.25em;
+  padding-left: 1em;
+  padding-right: 1em;
 }
 
 .graph-toolbox-content {
@@ -112,12 +112,22 @@ h3, h4, h5 { font-size: 1.2em; }
 
 .graph-toolbox-content .ant-space-item {
   display: flex;
-  align-content: center;
 }
-.ant-card-body{
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 70px);
+
+#sceneTags-panel {
+  height: 100%;
+}
+
+.sceneTags-attribute-card, .furniture-attribute-card {
+  margin: .5em;
+}
+.furniture-attribute-card{
+  height: calc(100% - 56px);
+}
+
+#sceneTags-panel .ant-card-body{
+   height: calc(100% - 164px);
+   overflow: auto;
 }
 
 .graph-container {
@@ -164,15 +174,15 @@ h3, h4, h5 { font-size: 1.2em; }
   height: 2px;
   background-image: linear-gradient(to right, transparent, #CCC, transparent);
 }
-
-#sceneTags-panel {
-  padding: 10px;
+#scenePositions{
+  height: 100%;
+}
+.sceneTagsPositions-card {
+  height: calc(100% - 1em);
+  margin: 0.5em;  
 }
 
 #scenePositions .ant-card-body{
-  height: 100%;
+  height: calc(100% - 56px);
   overflow: auto;
-}
-.sceneTagsPositions-card {
-  height: 100%;
 }

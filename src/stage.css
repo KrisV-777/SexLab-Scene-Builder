@@ -1,23 +1,15 @@
-/**
- * Generic globals
- * everything is in a main div so if we want items to be full width its easiest start from 0
- */
+/* Generic globals */
 body {
   padding: 0;
   margin: 0;
-  background: #f5f5f5;
 }
 
-/**
- * Top Stage Creater Start
- */
-
+/* Top Stage Creator Layout */
 .stage-header {
   width: 100%;
   position: sticky;
   padding-inline-start: 20px;
   padding-inline-end: 0px;
-  /* padding: 10; */
   top: 0;
   left: 0;
   z-index: 1000;
@@ -25,16 +17,6 @@ body {
 
 .stage-namefield {
   width: 450px;
-}
-
-#stage-namefield-input {
-  color: white;
-  font-style: oblique;
-  font-weight: bolder;
-}
-
-#stage-namefield-input::placeholder {
-  color: rgba(255, 255, 255, 0.26);
 }
 
 .stage-header-menu {
@@ -46,20 +28,13 @@ body {
   text-align: center;
 }
 
-/**
- * Positions
- */
+/* Positions */
 .position {
-  /* border: 2px solid hsla(232, 18%, 16%, 0.1); */
-  /* border-radius: 16px; */
   padding: 16px;
   padding-top: 0px;
 }
 
-/**
- * Tags
- */
-
+/* Tags */
 .tag-header-row {
   margin-left: 16px;
   margin-right: 16px;
@@ -79,14 +54,8 @@ body {
   max-height: 23px;
 }
 
-.ant-dropdown-menu-submenu-title {
-  max-height: 50px;
-}
-
-.ant-dropdown-menu-title-content {
-  max-height: 50px;
-}
-
+.ant-dropdown-menu-submenu-title,
+.ant-dropdown-menu-title-content,
 .ant-dropdown-menu-submenu-expand-icon {
   max-height: 50px;
 }
@@ -98,13 +67,8 @@ body {
 }
 
 .tag-display-field {
-  /* border: 2px hsla(232, 18%, 16%, 0.1) solid; */
-  /* border-radius: 16px; */
-  background-color: #FFF;
   width: 100%;
   margin-top: 0px;
-  /* padding: 18px; */
-  /* min-height: 52px; */
 }
 
 .stage-tag {
@@ -116,10 +80,7 @@ body {
   vertical-align: top;
 }
 
-/**
- * Extra
- */
-
+/* Extra */
 .extra-navinfo-textarea {
   width: 250px;
 }
@@ -132,30 +93,29 @@ body {
   display: block !important;
 }
 
-/**
- * Animation and Extras
- */
+/* Animation and Extras */
 ul[overlayclassname="test12334"] {
-    height: fit-content;
-    display: flex;
-    min-height: 100px;
-    flex-direction: column;
+  height: fit-content;
+  display: flex;
+  min-height: 100px;
+  flex-direction: column;
 }
 .ant-dropdown ul[overlayclassname="test12334"] li.ant-dropdown-menu-item {
-    height: auto;
-    min-height: 45px;
-    max-height: 45px;
-    margin-left: 7px;
-    margin-right: 7px;
-    padding: 2px;
+  height: auto;
+  min-height: 45px;
+  max-height: 45px;
+  margin-left: 7px;
+  margin-right: 7px;
+  padding: 2px;
 }
-.ant-dropdown ul[overlayclassname="test12334"] li.ant-dropdown-menu-item:last-child{
-    height: auto;
-    min-height: 50px;
-    padding-top: 5px;
-    margin-top: 5px;
-    align-items: flex-start;
+.ant-dropdown ul[overlayclassname="test12334"] li.ant-dropdown-menu-item:last-child {
+  height: auto;
+  min-height: 50px;
+  padding-top: 5px;
+  margin-top: 5px;
+  align-items: flex-start;
 }
+
 .ant-col {
   padding: 5px !important;
 }
@@ -163,6 +123,7 @@ ul[overlayclassname="test12334"] {
 .ant-input-number-group-wrapper {
   width: 100%;
 }
+
 .ant-collapse {
   margin-top: 10px;
 }

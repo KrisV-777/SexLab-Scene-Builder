@@ -16,8 +16,6 @@
 }
 
 body {
-  background-color: #222431;
-  color: white;
   padding: 0;
   font-family: Verdana, Geneva, Tahoma, sans-serif;
   margin: 0;
@@ -29,28 +27,6 @@ h1 {
   border-image: linear-gradient(to right, #445fef, #00008b00) 1;
   font-weight: lighter;
 }
-
-/* button { */
-/* padding: .5em; */
-/* border-radius: 1em; */
-/* font-weight: bold; */
-/* color: white; */
-/* background-color: #445fef; */
-/* border: 1px solid #445eef; */
-/* width: 80%; */
-/* cursor: pointer; */
-/* margin: 1em; */
-/* align-self: center; */
-/* } */
-/* button:hover { */
-/* background-color: #445eef7e; */
-/* border: 1px solid #445eef7e; */
-/* } */
-
-/* button { */
-/* box-shadow: none; */
-/* remove box shadow */
-/* } */
 
 [type="checkbox"],
 [type="radio"] {
@@ -66,7 +42,7 @@ label {
 }
 
 input:focus::-webkit-input-placeholder {
-  color: #d3d3d3;
+  /* No color styling */
 }
 
 h1,
@@ -77,37 +53,24 @@ h5 {
   font-family: 'Lucida Console', 'Courier New', Courier, monospace;
 }
 
-h1 {
-  font-size: 1.5em;
-}
-
-h2 {
-  font-size: 1.4em;
-}
-
-h3.h4,
-h5 {
-  font-size: 1.2em;
-}
+h1 { font-size: 1.5em; }
+h2 { font-size: 1.4em; }
+h3, h4, h5 { font-size: 1.2em; }
 
 .x6-graph-grid:first-of-type {
   display: none;
 }
 
-
 /* Main Window (Left side) */
-
 .main-sider {
   overflow: auto;
-  /* 48px = Height of collide button on sider */
-  height: calc(100vh);
+  height: 100vh;
   left: 0;
   top: 0;
   bottom: 0;
 }
 
 /* Main Window (Right side) */
-
 .scene-box {
   padding-top: 6px;
   padding-bottom: 6px;
@@ -136,9 +99,7 @@ h5 {
 
 .graph-toolbox {
   height: 36px;
-  background-color: #F9F9F9;
   border-radius: 5px;
-  border-color: hsla(232, 18%, 16%, 0.1);
   border-style: solid;
   padding: 2px;
   padding-left: 16px;
@@ -161,21 +122,17 @@ h5 {
 
 .graph-container {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
 }
 
 #graph {
   flex: 1;
-  background-color: #F9F9F9;
   border-radius: 5px;
-  border-color: hsla(232, 18%, 16%, 0.1);
   border-style: solid;
 }
 
 .graph-data-field {
-  background-color: #F9F9F9;
   border-radius: 5px;
-  border-color: hsla(232, 18%, 16%, 0.1);
   border-style: solid;
 }
 
@@ -196,17 +153,13 @@ h5 {
   line-height: 1.5;
   margin-top: 16px;
   margin-left: 16px;
-  color: var(--white);
-  background-color: var(--input-background);
   width: calc(100% - 36px);
   border: none !important;
 }
 .sidebar-form:focus{
-  border: 2px solid white;
+  border: 2px solid;
 }
 #sidebar-divider {
-  /* color: white; */
-  /* background: white; */
   border: 0;
   height: 2px;
   background-image: linear-gradient(to right, transparent, #CCC, transparent);

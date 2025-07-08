@@ -4,7 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Graph, Shape } from '@antv/x6'
 import { History } from "@antv/x6-plugin-history";
-import { Menu, Layout, Card, Input, Space, Button, Empty, Modal, Tooltip, notification, Divider, Switch, Checkbox, Row, Col, InputNumber, Select } from 'antd'
+import { Menu, Layout, Card, Input, Space, Button, Empty, Modal, Tooltip, notification, Divider, Switch, Checkbox, Row, Col, InputNumber, Select, ConfigProvider, theme } from 'antd'
 import {
   ExperimentOutlined, FolderOutlined, PlusOutlined, ExclamationCircleOutlined, QuestionCircleOutlined, DiffOutlined, ZoomInOutlined, ZoomOutOutlined,
   DeleteOutlined, DoubleLeftOutlined, DoubleRightOutlined, PicCenterOutlined, CompressOutlined, PushpinOutlined, DragOutlined, WarningOutlined, MenuFoldOutlined, MenuUnfoldOutlined
@@ -17,7 +17,7 @@ import { STAGE_EDGE, STAGE_EDGE_SHAPEID } from "./scene/SceneEdge"
 import { Furnitures } from "./common/Furniture";
 import "./scene/SceneNode"
 import "./App.css";
-import "./Dark.css";
+// import "./Dark.css";
 import ScenePosition from "./scene/ScenePosition";
 function makeMenuItem(label, key, icon, children, disabled, danger) {
   return { key, icon, children, label, disabled, danger };
@@ -29,6 +29,7 @@ import { remove } from "@tauri-apps/plugin-fs";
 const ZOOM_OPTIONS = { minScale: 0.25, maxScale: 5 };
 
 function App() {
+  const [isDark, setIsDark] = useState(false);
   const [collapsed, setCollapsed] = useState(false);  // Sider collapsed?
   const [api, contextHolder] = notification.useNotification();
   const graphcontainer_ref = useRef(null);
@@ -38,31 +39,20 @@ function App() {
   const [edited, setEdited] = useState(0);
   const inEdit = useRef(0);
 
-  // Dark Mode
-  useEffect(() => {
-    const toggleDarkMode = (toEnabled) => {
-      const root = document.getElementById('root');
-      if (toEnabled) {
-        root.classList.remove('default-style');
-        root.classList.add('dark-mode');
-      } else {
-        root.classList.remove('dark-mode');
-        root.classList.add('default-style');
-      }
-    }
-
-    invoke('get_in_darkmode').then(ret => toggleDarkMode(ret));
-    const unlisten = listen('toggle_darkmode', (event) => {
-      toggleDarkMode(event.payload);
-    });
-    return () => {
-      unlisten.then(res => { res() });
-    }
-  }, []);
-
   function generatePositionId() {
     return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
+
+  // Dark Mode Toggle 
+  useEffect(() => {
+    // Listen for the toggle_darkmode event from Tauri
+    const unlisten = listen('toggle_darkmode', (event) => {
+      setIsDark(event.payload); // event.payload should be true or false
+    });
+    return () => {
+      unlisten.then(f => f());
+    };
+  }, []);
 
   // Graph
   useEffect(() => {
@@ -580,7 +570,13 @@ function App() {
   }
 
   return (
+  <ConfigProvider
+    theme={{
+      algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+    }}
+  >
     <Layout hasSider>
+      
       <PanelGroup direction="horizontal">
         {/* Left Panel */}
         <Panel minSize={10} defaultSize={15} maxSize={50} id="left-panel">
@@ -606,7 +602,7 @@ function App() {
               />
               <Divider id="sidebar-divider" />
               <Menu
-                theme="dark"
+                theme={"dark"}
                 mode="inline"
                 selectable={false}
                 items={sideBarMenu}
@@ -791,7 +787,7 @@ function App() {
                               </Tooltip>
                             </Space>
                           </div>
-                          <div className="graph-container">
+                          <div className="graph-container"> 
                             <div id="graph" ref={graphcontainer_ref} />
                           </div>
                         </Card>
@@ -1050,7 +1046,7 @@ function App() {
                 <Space direction="vertical" style={{ width: "100%" }}>
                   <div style={{ height: "98%" }}>
                     {activeScene && activeScene.positions.map((pos, idx) => (
-                      <Col key={pos.id || idx} span={8}>
+                      <Col key={pos.id || idx} span={24}>
                         <ScenePosition
                           position={pos}
                           onChange={(newPos) => {
@@ -1071,6 +1067,7 @@ function App() {
         </Panel>
       </PanelGroup>
     </Layout>
+  </ConfigProvider>  
   );
 }
 

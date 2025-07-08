@@ -248,11 +248,10 @@ fn menu_event_listener(app: &tauri::AppHandle, event: tauri::menu::MenuEvent) {
             }
         }
         DARKMODE => {
-            let in_darkmode = get_darkmode();
-            if let Err(err) = app.emit("toggle_darkmode", !in_darkmode) {
+            let new_darkmode = !get_darkmode();
+            set_darkmode(new_darkmode);
+            if let Err(err) = app.emit("toggle_darkmode", new_darkmode) {
                 error!("Unable to toggle darkmode, event failure: {}", err);
-            } else {
-                set_darkmode(!in_darkmode);
             }
         }
         "open_docs" => {

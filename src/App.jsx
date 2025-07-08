@@ -1055,7 +1055,7 @@ function App() {
                 }
               >
                 <Space direction="vertical" style={{ width: "100%" }}>
-                  <div style={{ }}>
+                  <div className="scene-positions-list">
                     {activeScene && activeScene.positions.map((pos, idx) => (
                       <Col key={pos.id || idx} span={24}>
                         <ScenePosition

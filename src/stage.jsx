@@ -10,6 +10,7 @@ import { tagsSFW, tagsNSFW } from "./common/Tags"
 import PositionField from "./stage/PositionField";
 import TagTree from "./components/TagTree";
 import "./stage.css";
+import "./App.css";
 // import "./Dark.css";
 
 const { Header } = Layout;
@@ -287,7 +288,7 @@ function Editor({ _sceneId, _stage, _positions }) {
       token: isDark
         ? {
           //Dark Mode Color Overrides
-          colorBgBase: '#001529'
+          colorBgBase: '#001529',
         }
       : {
         // Light Mode Color Overrides
@@ -340,7 +341,7 @@ function Editor({ _sceneId, _stage, _positions }) {
             </Col>
           </Row>
         </Header>
-        <Collapse items={positionsCollapsed} defaultActiveKey={['1', '2', '3']} />;
+        <Collapse items={positionsCollapsed} defaultActiveKey={['1', '2', '3']} />
       </Layout>
     </ConfigProvider>
   )

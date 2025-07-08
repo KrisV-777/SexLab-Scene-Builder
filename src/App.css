@@ -15,6 +15,9 @@
   --placeholder: rgb(233, 184, 184);
   background: var(--dark-background);
 }
+.test {
+  background-color: #444
+}
 
 
 body {
@@ -63,6 +66,10 @@ h3, h4, h5 { font-size: 1.2em; }
 /* Hide duplicate Graph */
 .x6-graph-grid:first-of-type {
   display: none;
+}
+
+.x6-node foreignObject > body {
+  display: contents;
 }
 
 /* Set defaults */

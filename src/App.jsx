@@ -65,7 +65,7 @@ function App() {
         args: [
           {
             thickness: 1,
-            color: '#eee'
+            color: isDark ? '#444' : '#eee'
           },
           {
             color: 'rgba(33, 35, 48, 0.1)',
@@ -161,10 +161,10 @@ function App() {
 
     setGraph(newGraph);
     return () => {
-      newGraph.clearCells();
-      newGraph.clearGrid();
-      newGraph.clearBackground();
-      newGraph.disposePlugins();
+      newGraph.dispose();
+      if (graphcontainer_ref.current) {
+        graphcontainer_ref.current.innerHTML = '';
+      }
     }
   }, []);
 
@@ -401,6 +401,8 @@ function App() {
   let stageToGraphX = 40;
   let stageToGraphY = 40;
   const gridSize = 200;
+  // const DEFAULT_STAGE_WIDTH = 120;
+  // const DEFAULT_STAGE_HEIGHT = 60;
 
   // Kind of works but it does not track state of the nodes so its really only useful for inital adding of stages.
   // TODO: Fix this probably need to use state for this
@@ -419,6 +421,8 @@ function App() {
       id: stage.id,
       x: stageToGraphX,
       y: stageToGraphY,
+      // width: DEFAULT_STAGE_WIDTH,
+      // height: DEFAULT_STAGE_HEIGHT,
     });
     return node;
   };

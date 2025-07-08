@@ -62,11 +62,12 @@ h1 { font-size: 1.5em; }
 h2 { font-size: 1.4em; }
 h3, h4, h5 { font-size: 1.2em; }
 
-/* Hide duplicate Graph */
+/* Hide duplicate Graph probably not needed but leaving here incase*/
 .x6-graph-grid:first-of-type {
   display: none;
 }
 
+/* fix position issue for stage insertion */
 .x6-node foreignObject > body {
   display: contents;
 }
@@ -193,4 +194,16 @@ h3, h4, h5 { font-size: 1.2em; }
 #scenePositions .ant-card-body{
   height: calc(100% - 56px);
   overflow: auto;
+}
+
+.scene-positions-list .ant-card-body > div {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.scene-positions-list .ant-card-body > div .ant-space-item {
+  display: flex;
+  align-items: center; 
 }

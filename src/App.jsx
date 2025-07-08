@@ -7,7 +7,7 @@ import { History } from "@antv/x6-plugin-history";
 import { Menu, Layout, Card, Input, Space, Button, Empty, Modal, Tooltip, notification, Divider, Switch, Checkbox, Row, Col, InputNumber, Select, ConfigProvider, theme } from 'antd'
 import {
   ExperimentOutlined, FolderOutlined, PlusOutlined, ExclamationCircleOutlined, QuestionCircleOutlined, DiffOutlined, ZoomInOutlined, ZoomOutOutlined,
-  DeleteOutlined, DoubleLeftOutlined, DoubleRightOutlined, PicCenterOutlined, CompressOutlined, PushpinOutlined, DragOutlined, WarningOutlined, MenuFoldOutlined, MenuUnfoldOutlined
+  DeleteOutlined, DoubleLeftOutlined, DoubleRightOutlined, PicCenterOutlined, CompressOutlined, PushpinOutlined, DragOutlined, WarningOutlined
 } from '@ant-design/icons';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import './ResizableSidebar.css';
@@ -1040,7 +1040,13 @@ function App() {
             <PanelResizeHandle className="resize-handle-horizontal" />
 
             {/* Bottom Positions Field */}
-            <Panel minSize={15} maxSize={50} id="scenePositions" style={{ minHeight: "150px" }}>
+            <Panel 
+              minSize={15}
+              maxSize={50}
+              id="scenePositions"
+              style={{ minHeight: "150px", maxHeight: "225px" }}
+              defaultSize={100}
+            >
               <Card
                 className="sceneTagsPositions-card"
                 bordered={false}

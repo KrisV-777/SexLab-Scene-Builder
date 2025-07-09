@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useImmer } from "use-immer";
-import { invoke } from "@tauri-apps/api/tauri";
-import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
+import { listen, emit } from "@tauri-apps/api/event";
 import { Graph, Shape } from '@antv/x6'
 import { History } from "@antv/x6-plugin-history";
 import { Menu, Layout, Card, Input, Space, Button, Empty, Modal, Tooltip, notification, Divider, Switch, Checkbox, Row, Col, InputNumber, Select } from 'antd'
@@ -18,9 +18,13 @@ import { Furnitures } from "./common/Furniture";
 import "./scene/SceneNode"
 import "./App.css";
 import "./Dark.css";
+import ScenePosition from "./scene/ScenePosition";
 function makeMenuItem(label, key, icon, children, disabled, danger) {
   return { key, icon, children, label, disabled, danger };
 }
+import { tagsSFW, tagsNSFW } from "./common/Tags"
+import TagTree from "./components/TagTree";
+import { remove } from "@tauri-apps/plugin-fs";
 
 const ZOOM_OPTIONS = { minScale: 0.25, maxScale: 5 };
 
@@ -33,8 +37,6 @@ function App() {
   const [activeScene, updateActiveScene] = useImmer(null);
   const [edited, setEdited] = useState(0);
   const inEdit = useRef(0);
-
-
 
   // Dark Mode
   useEffect(() => {
@@ -57,6 +59,10 @@ function App() {
       unlisten.then(res => { res() });
     }
   }, []);
+
+  function generatePositionId() {
+    return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
 
   // Graph
   useEffect(() => {
@@ -114,8 +120,7 @@ function App() {
         enabled: true,
       }));
 
-    newGraph
-      // Node Events
+    newGraph // Node Events
       .on("node:removed", ({ node }) => {
         if (inEdit.current) return;
         updateActiveScene(prev => {
@@ -161,7 +166,7 @@ function App() {
         setEdited(true);
       })
       .on("node:clone", ({ node }) => {
-        invoke('open_stage_editor_from', { control: node.prop('stage') });
+        invoke('open_stage_editor_from', { activeScene: node.prop('scene'), stage: node.prop('stage') });
       })
 
     setGraph(newGraph);
@@ -178,9 +183,10 @@ function App() {
 
     const editStage = (node) => {
       let stage = node.prop('stage');
+      console.log("Editing stage", stage, "in scene", activeScene);
+
       console.assert(activeScene.stages.findIndex(it => it.id === stage.id) > -1, "Editing stage that does not belong to active scene: ", stage, activeScene);
-      let control = activeScene.stages.length === 1 ? null : stage;
-      invoke('open_stage_editor', { stage, control });
+      invoke('open_stage_editor', { activeScene: activeScene, stage });
     }
 
     graph
@@ -199,48 +205,121 @@ function App() {
   // Stage & Scene update
   useEffect(() => {
     // Callback after stage has been saved in other window
-    const unlisten = listen('on_stage_saved', (event) => {
-      const stage = event.payload;
-      console.log("Saving new stage", stage);
-      const nodes = graph.getNodes();
-      let node = nodes.find(node => node.id === stage.id);
-      if (!node) node = addStageToGraph(stage);
-      updateNodeProps(stage, node, activeScene);
-
-      let newActive = structuredClone(activeScene);
-      let idx = newActive.stages ? newActive.stages.findIndex(it => it.id === stage.id) : -1;
-      if (idx === -1) {
-        newActive.stages.push(stage)
-        if (newActive.stages.length === 1) {
+    const stage_save = listen('on_stage_saved', (event) => {
+      const { scene, positions, stage } = event.payload;
+      console.log("Saving new stage in ", scene, positions, stage);
+      const updatingActiveScene = scenes.length === 0 || activeScene.id === scene;
+      let updatedScene = undefined, updatedSceneIdx = undefined, node = undefined;
+      if (updatingActiveScene) {
+        const nodes = graph.getNodes();
+        node = nodes.find(node => node.id === stage.id);
+        if (!node) node = addStageToGraph(stage);
+        updateNodeProps(stage, node, activeScene);
+        updatedScene = activeScene;
+      } else {
+        updatedSceneIdx = scenes.findIndex(it => it.id === sceneId);
+        if (updatedSceneIdx === -1) {
+          console.error("Scene not found in scenes list", sceneId, scenes);
+          return;
+        }
+        updatedScene = scenes[updatedSceneIdx];
+      }
+      updatedScene = structuredClone(updatedScene);
+      let editedStageIdx = updatedScene.stages?.findIndex(it => it.id === stage.id) ?? -1;
+      if (editedStageIdx === -1) {
+        // Stage is new, add it to the scene
+        updatedScene.stages = updatedScene.stages || [];
+        updatedScene.stages.push(stage);
+        if (updatedScene.stages.length === 1) {
+          // If this is the first stage, set it as the start stage
           node.prop('isStart', true);
-          newActive.root = stage.id;
+          updatedScene.root = stage.id;
         }
       } else {
-        newActive.stages[idx] = stage;
+        // Stage already exists, update it
+        updatedScene.stages[editedStageIdx] = stage;
       }
-      for (let i = 0; i < newActive.stages.length; i++) {
-        // skip if the node has just been edited or newly created
-        if (i == idx || node.id === newActive.stages[i].id) {
-          continue;
-        }
-        let node2 = nodes.find(it => it.id === newActive.stages[i].id);
-        console.assert(node2 != undefined);
-        updateNodeProps(newActive.stages[i], node2, newActive);
-        for (let n = 0; n < newActive.stages[i].positions.length; n++) {
-          newActive.stages[i].positions[n].sex = { ...stage.positions[n].sex };
-          newActive.stages[i].positions[n].scale = stage.positions[n].scale;
-          newActive.stages[i].positions[n].extra = { ...stage.positions[n].extra, climax: newActive.stages[i].positions[n].extra.climax };
-        }
+      // Update positions
+      updatedScene.positions = positions;
+      if (updatingActiveScene) {
+        updateActiveScene(updatedScene);
+        setEdited(true);
+      } else {
+        updateScenes(prev => {
+          prev[updatedSceneIdx] = updatedScene;
+        });
       }
+    });
+    const position_remove = listen('on_position_remove', (event) => {
+      const { sceneId, positionIdx } = event.payload;
+      console.log("Removing position", positionIdx, "from scene", sceneId);
 
-      updateActiveScene(newActive);
-      setEdited(true);
+      const remove_position = (scene) => {
+        // Remove from each stage
+        scene.stages.forEach(stage => {
+          if (positionIdx >= 0 && positionIdx < stage.positions.length) {
+            stage.positions = stage.positions.filter((_, idx) => idx !== positionIdx);
+          }
+        });
+        // Remove from scene.positions
+        scene.positions = scene.positions.filter((_, idx) => idx !== positionIdx);
+        scene.has_warnings = true;
+      };
+      if (scenes.length === 0 || activeScene.id === sceneId) {
+        updateActiveScene(draft => remove_position(draft));
+      } else {
+        updateScenes(draft => {
+          const idx = draft.findIndex(it => it.id === sceneId);
+          if (idx === -1) return;
+          remove_position(draft[idx]);
+        });
+      }
+    });
+    const position_add = listen('on_position_add', (event) => {
+      const { sceneId, position } = event.payload;
+      console.log("Adding position", position, "to scene", sceneId);
+
+      const add_position = (scene) => {
+        // Always clone and assign a unique id
+        const newPosition = { ...position.info, id: generatePositionId() };
+        scene.stages.forEach(stage => {
+          stage.positions.push({ ...position.position, id: generatePositionId() });
+        });
+        scene.positions.push(newPosition);
+        scene.has_warnings = true;
+      };
+
+      if (scenes.length === 0 || activeScene.id === sceneId) {
+        updateActiveScene(draft => add_position(draft));
+      } else {
+        updateScenes(draft => {
+          const idx = draft.findIndex(it => it.id === sceneId);
+          if (idx === -1) return;
+          add_position(draft[idx]);
+        });
+      }
+    });
+    const position_change = listen('on_position_change', (event) => {
+      const { sceneId, stageId, positionIdx, info } = event.payload;
+      if (stageId === 0) return // invoked by ScenePosition, skip
+      // Skip position change if the scene is not currently active
+      // If the stage of an inactive scene is saved, the info will be updated accordingly
+      if (scenes.length === 0 || activeScene.id === sceneId) {
+        updateActiveScene(draft => {
+          // Always clone and assign a unique id
+          const newPosition = { ...info, id: generatePositionId() };
+          draft.positions[positionIdx] = newPosition;
+        });
+      }
     });
     return () => {
       console.log("Active before update:", activeScene);
-      unlisten.then(res => { res() });
+      stage_save.then(res => { res() });
+      position_remove.then(res => { res() });
+      position_add.then(res => { res() });
+      position_change.then(res => { res() });
     }
-  }, [graph, activeScene])
+  }, [graph, activeScene, scenes])
 
   useEffect(() => {
     if (!graph) return;
@@ -330,18 +409,34 @@ function App() {
     setEdited(false);
   }
 
-  const addStageToGraph = (stage, x = 40, y = 40) => {
+  let stageToGraphX = 40;
+  let stageToGraphY = 40;
+  const gridSize = 200;
+
+  // Kind of works but it does not track state of the nodes so its really only useful for inital adding of stages.
+  // TODO: Fix this probably need to use state for this
+  const addStageToGraph = (stage) => {
+    const nodes = graph.getNodes();
+    if (nodes.length > 0) {
+      stageToGraphX += gridSize;
+      if (stageToGraphX > graph.container.clientWidth - gridSize) {
+        stageToGraphX = 40;
+        stageToGraphY += gridSize;
+      }
+    }
+
     const node = graph.addNode({
       shape: 'stage_node',
       id: stage.id,
-      x,
-      y,
+      x: stageToGraphX,
+      y: stageToGraphY,
     });
     return node;
-  }
+  };
 
   const updateNodeProps = (stage, node, belongingScene) => {
     node.prop('stage', stage);
+    node.prop('scene', belongingScene);
     node.prop('fixedLen', stage.extra.fixed_len);
     node.prop('isStart', belongingScene && belongingScene.root === stage.id);
   }
@@ -488,8 +583,9 @@ function App() {
   return (
     <Layout hasSider>
       <PanelGroup direction="horizontal">
-        <Panel defaultSize={20} minSize={20} maxSize={50}>
-        {contextHolder}
+        {/* Left Panel */}
+        <Panel minSize={10} defaultSize={15} maxSize={50} id="left-panel">
+          {contextHolder}
           <Sider
             className="main-sider"
             collapsible
@@ -499,9 +595,17 @@ function App() {
             trigger={null}
           >
             <div className="sider-content">
-              <input type="text" placeholder="Package Name" className="sidebar-form" />
-              <input type="text" placeholder="Author Name" className="sidebar-form" />
-              <Divider id="sidebar-divider"/>
+              <input
+                type="text"
+                placeholder="Package Name"
+                className="sidebar-form"
+              />
+              <input
+                type="text"
+                placeholder="Author Name"
+                className="sidebar-form"
+              />
+              <Divider id="sidebar-divider" />
               <Menu
                 theme="dark"
                 mode="inline"
@@ -512,335 +616,465 @@ function App() {
             </div>
           </Sider>
         </Panel>
+        {/* End Left Panel */}
+
         <PanelResizeHandle className="resize-handle" />
+
         <Panel>
-          <Layout >
-            <Content>
-              {/* hacky workaround because graph doesnt render nodes if I put the graph interface into a child component zzz */}
-              {/* if (activeScene) ... */}
-              <div
-                className="scene-box"
-                style={{ display: !activeScene ? 'none' : undefined }}
-              >
-                <Card
-                  className="graph-editor-field a"
-                  title={
-                    activeScene ? (
-                      <Space.Compact style={{ width: '98%' }}>
-                        <div style={edited < 1 ? { display: 'none' } : {}}>
-                          <Tooltip title={'Unsaved changes'}>
-                            <DiffOutlined />
-                          </Tooltip>
-                        </div>
-                        <Input
-                          size="large"
-                          maxLength={30}
-                          bordered={false}
-                          id="stageNameInputField"
-                          value={activeScene.name}
-                          onChange={(e) => {
-                            updateActiveScene((prev) => {
-                              prev.name = e.target.value;
-                            });
-                            setEdited(true);
-                          }}
-                          onFocus={(e) => e.target.select()}
-                          placeholder="Scene Name"
-                        />
-                      </Space.Compact>
-                    ) : (
-                      <></>
-                    )
-                  }
-                  extra={
-                    <Space.Compact block>
-                      <Button
-                        onClick={() => {
-                          invoke('open_stage_editor', {
-                            control: activeScene.stages[0],
-                          });
-                        }}
+          <PanelGroup direction="vertical">
+            <Panel defaultSize={50} style={{}}>
+              <PanelGroup direction="horizontal">
+                {/* Graph Area */}
+                <Panel id="graph-panel">
+                  <Layout style={{ height: "100%" }}>
+                    <Content>
+                      {/* hacky workaround because graph doesnt render nodes if I put the graph interface into a child component zzz */}
+                      {/* if (activeScene) ... */}
+                      <div
+                        className="scene-box"
+                        style={{ display: !activeScene ? "none" : undefined }}
                       >
-                        Add Stage
-                      </Button>
-                      <Button onClick={saveScene} type="primary">
-                        Store
-                      </Button>
-                    </Space.Compact>
-                  }
-                // bodyStyle={{ height: 'calc(100% - 190px)' }}
-                >
-                  <div className="graph-toolbox">
-                    <Space
-                      className="graph-toolbox-content"
-                      size={'small'}
-                      align="center"
-                    >
-                      <Tooltip title="Undo" mouseEnterDelay={0.5}>
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<DoubleLeftOutlined />}
-                          onClick={() => {
-                            if (graph.canUndo()) graph.undo();
+                        <Card
+                          className="graph-editor-field a"
+                          style={{
+                            height: "100%",
                           }}
-                        />
-                      </Tooltip>
-                      <Tooltip title="Redo" mouseEnterDelay={0.5}>
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<DoubleRightOutlined />}
-                          onClick={() => {
-                            if (graph.canRedo()) graph.redo();
-                          }}
-                        />
-                      </Tooltip>
-                      <Divider type="vertical" />
-                      <Tooltip title="Center content" mouseEnterDelay={0.5}>
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<CompressOutlined />}
-                          onClick={() => graph.centerContent()}
-                        />
-                      </Tooltip>
-                      <Tooltip title="Fit to screen" mouseEnterDelay={0.5}>
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<PicCenterOutlined />}
-                          onClick={() => graph.zoomToFit()}
-                        />
-                      </Tooltip>
-                      <Tooltip title="Lock canvas" mouseEnterDelay={0.5}>
-                        <Switch
-                          size="small"
-                          checkedChildren={<PushpinOutlined />}
-                          unCheckedChildren={<DragOutlined />}
-                          onChange={(checked) => {
-                            graph.togglePanning(!checked);
-                          }}
-                        />
-                      </Tooltip>
-                      <Divider type="vertical" />
-                      <Tooltip title="Zoom out" mouseEnterDelay={0.5}>
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<ZoomOutOutlined />}
-                          onClick={() => {
-                            graph.zoomTo(graph.zoom() * 0.8, ZOOM_OPTIONS);
-                          }}
-                        />
-                      </Tooltip>
-                      <Tooltip title="Zoom in" mouseEnterDelay={0.5}>
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<ZoomInOutlined />}
-                          onClick={() => {
-                            graph.zoomTo(graph.zoom() * 1.2, ZOOM_OPTIONS);
-                          }}
-                        />
-                      </Tooltip>
-                      <Divider type="vertical" />
-                      <Tooltip title="Clear canvas" mouseEnterDelay={0.5}>
-                        <Button
-                          type="text"
-                          size="small"
-                          danger
-                          icon={<DeleteOutlined />}
-                          onClick={clearGraph}
-                        />
-                      </Tooltip>
-                    </Space>
-                  </div>
-                  <div className="graph-container">
-                    <div id="graph" ref={graphcontainer_ref} />
-                  </div>
-                  <div className="graph-data-field">
-                    <Space size={'large'}>
-                      <Space direction="vertical" size={'large'}>
-                        <Select
-                          className="graph-furniture-selection"
-                          value={
-                            activeScene ? activeScene.furniture.furni_types : []
+                          title={
+                            activeScene ? (
+                              <Space.Compact style={{ width: "98%" }}>
+                                <div
+                                  style={edited < 1 ? { display: "none" } : {}}
+                                >
+                                  <Tooltip title={"Unsaved changes"}>
+                                    <DiffOutlined />
+                                  </Tooltip>
+                                </div>
+                                <Input
+                                  size="large"
+                                  maxLength={30}
+                                  bordered={false}
+                                  id="stageNameInputField"
+                                  value={activeScene.name}
+                                  onChange={(e) => {
+                                    updateActiveScene((prev) => {
+                                      prev.name = e.target.value;
+                                    });
+                                    setEdited(true);
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  placeholder="Scene Name"
+                                />
+                              </Space.Compact>
+                            ) : (
+                              <></>
+                            )
                           }
-                          options={Furnitures}
-                          mode="multiple"
-                          onSelect={(value) => {
-                            if (value === 'None') {
-                              updateActiveScene((prev) => {
-                                prev.furniture.furni_types = [value];
-                                return prev;
-                              });
-                            } else {
-                              updateActiveScene((prev) => {
-                                let where =
-                                  prev.furniture.furni_types.indexOf('None');
-                                if (where === -1)
-                                  prev.furniture.furni_types.push(value);
-                                else
-                                  prev.furniture.furni_types[where] = value;
-                                prev.furniture.allow_bed = false;
-                                return prev;
-                              });
-                            }
-                            setEdited(true);
-                          }}
-                          onDeselect={(value) => {
+                          extra={
+                            <Space.Compact block>
+                              <Button
+                                onClick={() => {
+                                  invoke("open_stage_editor", {
+                                    activeScene: activeScene,
+                                    stage: null,
+                                  });
+                                }}
+                              >
+                                Add Stage
+                              </Button>
+                              <Button onClick={saveScene} type="primary">
+                                Store
+                              </Button>
+                            </Space.Compact>
+                          }
+                        // bodyStyle={{ height: 'calc(100% - 190px)' }}
+                        >
+                          <div className="graph-toolbox">
+                            <Space
+                              className="graph-toolbox-content"
+                              size={"small"}
+                              align="center"
+                            >
+                              <Tooltip title="Undo" mouseEnterDelay={0.5}>
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<DoubleLeftOutlined />}
+                                  onClick={() => {
+                                    if (graph.canUndo()) graph.undo();
+                                  }}
+                                />
+                              </Tooltip>
+                              <Tooltip title="Redo" mouseEnterDelay={0.5}>
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<DoubleRightOutlined />}
+                                  onClick={() => {
+                                    if (graph.canRedo()) graph.redo();
+                                  }}
+                                />
+                              </Tooltip>
+                              <Divider type="vertical" />
+                              <Tooltip
+                                title="Center content"
+                                mouseEnterDelay={0.5}
+                              >
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<CompressOutlined />}
+                                  onClick={() => graph.centerContent()}
+                                />
+                              </Tooltip>
+                              <Tooltip
+                                title="Fit to screen"
+                                mouseEnterDelay={0.5}
+                              >
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<PicCenterOutlined />}
+                                  onClick={() => graph.zoomToFit()}
+                                />
+                              </Tooltip>
+                              <Tooltip
+                                title="Lock canvas"
+                                mouseEnterDelay={0.5}
+                              >
+                                <Switch
+                                  size="small"
+                                  checkedChildren={<PushpinOutlined />}
+                                  unCheckedChildren={<DragOutlined />}
+                                  onChange={(checked) => {
+                                    graph.togglePanning(!checked);
+                                  }}
+                                />
+                              </Tooltip>
+                              <Divider type="vertical" />
+                              <Tooltip title="Zoom out" mouseEnterDelay={0.5}>
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<ZoomOutOutlined />}
+                                  onClick={() => {
+                                    graph.zoomTo(
+                                      graph.zoom() * 0.8,
+                                      ZOOM_OPTIONS
+                                    );
+                                  }}
+                                />
+                              </Tooltip>
+                              <Tooltip title="Zoom in" mouseEnterDelay={0.5}>
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<ZoomInOutlined />}
+                                  onClick={() => {
+                                    graph.zoomTo(
+                                      graph.zoom() * 1.2,
+                                      ZOOM_OPTIONS
+                                    );
+                                  }}
+                                />
+                              </Tooltip>
+                              <Divider type="vertical" />
+                              <Tooltip
+                                title="Clear canvas"
+                                mouseEnterDelay={0.5}
+                              >
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  danger
+                                  icon={<DeleteOutlined />}
+                                  onClick={clearGraph}
+                                />
+                              </Tooltip>
+                            </Space>
+                          </div>
+                          <div className="graph-container">
+                            <div id="graph" ref={graphcontainer_ref} />
+                          </div>
+                        </Card>
+                      </div>
+                      {/* else ... */}
+                      <Empty
+                        style={activeScene ? { display: "none" } : {}}
+                        className="graph-no-scene-placeholder"
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        description={"No scene loaded :("}
+                      >
+                        <Button
+                          type="primary"
+                          onClick={() => onSiderSelect({ key: "add" })}
+                        >
+                          New Scene
+                        </Button>
+                      </Empty>
+                      {/* endif */}
+                    </Content>
+                  </Layout>
+                </Panel>
+                {/* End Graph Area */}
+
+                <PanelResizeHandle className="resize-handle" />
+
+                <Panel
+                  id="sceneTags-panel"
+                  minSize={30}
+                  defaultSize={30}
+                  maxSize={40}
+                  Scroll
+                // style={{
+                //   overflow: "auto",
+                // }}
+                >
+                  {/* TODO: Only one card can be displayed here, but Furniture & Tag information would probably want to be separated somehow */}
+                  <Card
+                    className="sceneTags-attribute-card"
+                    bordered={false}
+                    title={"Scene Tags"}
+                    extra={
+                      <Tooltip
+                        className="tool-tip"
+                        title={"Tags which are shared between all stages in the scene."}
+                      >
+                        <Button type="link">Info</Button>
+                      </Tooltip>
+                    }
+                  >
+                    <TagTree
+                      tags={activeScene ? activeScene.tags : []}
+                      onChange={(tags) => {
+                        updateActiveScene((prev) => {
+                          prev.tags = tags;
+                        });
+                        setEdited(true);
+                      }}
+                      tagsSFW={activeScene ? tagsSFW : []}
+                      tagsNSFW={activeScene ? tagsNSFW : []}
+                    />
+                  </Card>
+                  <Card
+                    bordered={false}
+                    title={"Furniture"}
+                    extra={
+                      <Tooltip
+                        className="tool-tip"
+                        title={"Furniture settings for the scene."}
+                      >
+                        <Button type="link">Info</Button>
+                      </Tooltip>
+                    }
+                  >
+                    <Space size={"large"} direction="vertical">
+                      <Select
+                        className="graph-furniture-selection"
+                        value={
+                          activeScene ? activeScene.furniture.furni_types : []
+                        }
+                        options={Furnitures}
+                        mode="multiple"
+                        onSelect={(value) => {
+                          if (value === "None") {
                             updateActiveScene((prev) => {
-                              prev.furniture.furni_types =
-                                prev.furniture.furni_types.filter(
-                                  (it) => it !== value
-                                );
-                              if (prev.furniture.furni_types.length === 0) {
-                                prev.furniture.furni_types = ['None'];
-                              }
+                              prev.furniture.furni_types = [value];
                               return prev;
                             });
+                          } else {
+                            updateActiveScene((prev) => {
+                              let where =
+                                prev.furniture.furni_types.indexOf("None");
+                              if (where === -1)
+                                prev.furniture.furni_types.push(value);
+                              else prev.furniture.furni_types[where] = value;
+                              prev.furniture.allow_bed = false;
+                              return prev;
+                            });
+                          }
+                          setEdited(true);
+                        }}
+                        onDeselect={(value) => {
+                          updateActiveScene((prev) => {
+                            prev.furniture.furni_types =
+                              prev.furniture.furni_types.filter(
+                                (it) => it !== value
+                              );
+                            if (prev.furniture.furni_types.length === 0) {
+                              prev.furniture.furni_types = ["None"];
+                            }
+                            return prev;
+                          });
+                          setEdited(true);
+                        }}
+                      />
+                      <Checkbox
+                        onChange={(e) => {
+                          updateActiveScene((prev) => {
+                            prev.furniture.allow_bed = e.target.checked;
+                          });
+                          setEdited(true);
+                        }}
+                        checked={activeScene && activeScene.furniture.allow_bed}
+                        disabled={
+                          activeScene &&
+                          !activeScene.furniture.furni_types.includes("None")
+                        }
+                      >
+                        Allow Bed
+                      </Checkbox>
+                      <Checkbox
+                        onChange={(e) => {
+                          updateActiveScene((prev) => {
+                            prev.private = e.target.checked;
+                          });
+                          setEdited(true);
+                        }}
+                        checked={activeScene && activeScene.private}
+                      >
+                        Private
+                      </Checkbox>
+                      <Row gutter={[12, 12]} justify={"space-evenly"}>
+                        <Col>
+                          <InputNumber
+                            addonBefore={"X"}
+                            controls
+                            decimalSeparator=","
+                            precision={1}
+                            step={0.1}
+                            value={
+                              activeScene
+                                ? activeScene.furniture.offset.x
+                                  ? activeScene.furniture.offset.x
+                                  : undefined
+                                : undefined
+                            }
+                            onChange={(e) => {
+                              updateActiveScene((prev) => {
+                                prev.furniture.offset.x = e;
+                              });
+                              setEdited(true);
+                            }}
+                            placeholder="0.0"
+                          />
+                        </Col>
+                        <Col>
+                          <InputNumber
+                            addonBefore={"Y"}
+                            controls
+                            decimalSeparator=","
+                            precision={1}
+                            step={0.1}
+                            value={
+                              activeScene && activeScene.furniture.offset.y
+                                ? activeScene.furniture.offset.y
+                                : undefined
+                            }
+                            onChange={(e) => {
+                              updateActiveScene((prev) => {
+                                prev.furniture.offset.y = e;
+                              });
+                              setEdited(true);
+                            }}
+                            placeholder="0.0"
+                          />
+                        </Col>
+                        <Col>
+                          <InputNumber
+                            addonBefore={"Z"}
+                            controls
+                            decimalSeparator=","
+                            precision={1}
+                            step={0.1}
+                            value={
+                              activeScene
+                                ? activeScene.furniture.offset.z
+                                  ? activeScene.furniture.offset.z
+                                  : undefined
+                                : undefined
+                            }
+                            onChange={(e) => {
+                              updateActiveScene((prev) => {
+                                prev.furniture.offset.z = e;
+                              });
+                              setEdited(true);
+                            }}
+                            placeholder="0.0"
+                          />
+                        </Col>
+                        <Col>
+                          <InputNumber
+                            addonBefore={"°"}
+                            controls
+                            decimalSeparator=","
+                            precision={1}
+                            step={0.1}
+                            min={0.0}
+                            max={359.9}
+                            value={
+                              (activeScene && activeScene.furniture.offset.r) ||
+                              undefined
+                            }
+                            onChange={(e) => {
+                              updateActiveScene((prev) => {
+                                prev.furniture.offset.r = e;
+                              });
+                              setEdited(true);
+                            }}
+                            placeholder="0.0"
+                          />
+                        </Col>
+                      </Row>
+                    </Space>
+                  </Card>
+                </Panel>
+              </PanelGroup>
+            </Panel>
+
+            <PanelResizeHandle className="resize-handle-horizontal" />
+
+            {/* Bottom Positions Field */}
+            <Panel minSize={15} maxSize={50} id="scenePositions">
+              <Card
+                className="sceneTagsPositions-card"
+                bordered={false}
+                title="Scene Positions"
+                extra={
+                  <Tooltip
+                    className="tool-tip"
+                    title={"Position Date shared between all stages in the scene."}
+                  >
+                    <Button type="link">Info</Button>
+                  </Tooltip>
+                }
+              >
+                <Space direction="vertical" style={{ width: "100%" }}>
+                  <div style={{ height: "98%" }}>
+                    {activeScene && activeScene.positions.map((pos, idx) => (
+                      <Col key={pos.id || idx} span={8}>
+                        <ScenePosition
+                          position={pos}
+                          onChange={(newPos) => {
+                            updateActiveScene(draft => {
+                              draft.positions[idx] = { ...newPos, id: pos.id || generatePositionId() };
+                            });
+                            emit('on_position_change', {
+                              sceneId: activeScene.id,
+                              stageId: 0,
+                              positionIdx: idx,
+                              info: { ...newPos }
+                            });
                             setEdited(true);
                           }}
                         />
-                        <Checkbox
-                          onChange={(e) => {
-                            updateActiveScene((prev) => {
-                              prev.furniture.allow_bed = e.target.checked;
-                            });
-                            setEdited(true);
-                          }}
-                          checked={activeScene && activeScene.furniture.allow_bed}
-                          disabled={
-                            activeScene &&
-                            !activeScene.furniture.furni_types.includes('None')
-                          }
-                        >
-                          Allow Bed
-                        </Checkbox>
-                        <Checkbox
-                          onChange={(e) => {
-                            updateActiveScene((prev) => {
-                              prev.private = e.target.checked;
-                            });
-                            setEdited(true);
-                          }}
-                          checked={activeScene && activeScene.private}
-                        >
-                          Private
-                        </Checkbox>
-                      </Space>
-                      <Space>
-                        <Row gutter={[12, 12]} justify={'space-evenly'}>
-                          <Col>
-                            <InputNumber
-                              addonBefore={'X'}
-                              controls
-                              decimalSeparator=","
-                              precision={1}
-                              step={0.1}
-                              value={
-                                activeScene
-                                  ? activeScene.furniture.offset.x
-                                    ? activeScene.furniture.offset.x
-                                    : undefined
-                                  : undefined
-                              }
-                              onChange={(e) => {
-                                updateActiveScene((prev) => {
-                                  prev.furniture.offset.x = e;
-                                });
-                                setEdited(true);
-                              }}
-                              placeholder="0.0"
-                            />
-                          </Col>
-                          <Col>
-                            <InputNumber
-                              addonBefore={'Y'}
-                              controls
-                              decimalSeparator=","
-                              precision={1}
-                              step={0.1}
-                              value={
-                                activeScene && activeScene.furniture.offset.y
-                                  ? activeScene.furniture.offset.y
-                                  : undefined
-                              }
-                              onChange={(e) => {
-                                updateActiveScene((prev) => {
-                                  prev.furniture.offset.y = e;
-                                });
-                                setEdited(true);
-                              }}
-                              placeholder="0.0"
-                            />
-                          </Col>
-                          <Col>
-                            <InputNumber
-                              addonBefore={'Z'}
-                              controls
-                              decimalSeparator=","
-                              precision={1}
-                              step={0.1}
-                              value={
-                                activeScene
-                                  ? activeScene.furniture.offset.z
-                                    ? activeScene.furniture.offset.z
-                                    : undefined
-                                  : undefined
-                              }
-                              onChange={(e) => {
-                                updateActiveScene((prev) => {
-                                  prev.furniture.offset.z = e;
-                                });
-                                setEdited(true);
-                              }}
-                              placeholder="0.0"
-                            />
-                          </Col>
-                          <Col>
-                            <InputNumber
-                              addonBefore={'°'}
-                              controls
-                              decimalSeparator=","
-                              precision={1}
-                              step={0.1}
-                              min={0.0}
-                              max={359.9}
-                              value={activeScene && activeScene.furniture.offset.r || undefined}
-                              onChange={(e) => {
-                                updateActiveScene((prev) => {
-                                  prev.furniture.offset.r = e;
-                                });
-                                setEdited(true);
-                              }}
-                              placeholder="0.0"
-                            />
-                          </Col>
-                        </Row>
-                      </Space>
-                    </Space>
+                      </Col>
+                    ))}
                   </div>
-                </Card>
-              </div>
-              {/* else ... */}
-              <Empty
-                style={activeScene ? { display: 'none' } : {}}
-                className="graph-no-scene-placeholder"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description={'No scene loaded :('}
-              >
-                <Button
-                  type="primary"
-                  onClick={() => onSiderSelect({ key: 'add' })}
-                >
-                  New Scene
-                </Button>
-              </Empty>
-              {/* endif */}
-            </Content>
-          </Layout>
+                </Space>
+              </Card>
+            </Panel>
+            {/* Bottom Positions Field */}
+          </PanelGroup>
         </Panel>
       </PanelGroup>
     </Layout>
@@ -848,4 +1082,3 @@ function App() {
 }
 
 export default App;
-

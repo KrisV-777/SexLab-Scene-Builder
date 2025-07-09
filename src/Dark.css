@@ -8,7 +8,9 @@
     --black: rgb(0, 0, 0);
     --placeholder: rgb(233, 184, 184);
 }
-
+#root.dark-mode {
+    background-color: #141414;
+  }
 /* Set sane font defaults */
 #root.dark-mode, #root.dark-mode div, #root.dark-mode span {
     color: var(--dark-text);
@@ -33,8 +35,11 @@
     color: var(--black);
 }
 /* Tag backgrounds */
-#root.dark-mode .ant-select-selection-item {
+#root.dark-mode .ant-collapse-content  {
     background-color: var(--dark-background-alt);
+}
+#root.dark-mode .ant-collapse-item {
+    background-color: var(--dark-background);
 }
 /* Fix for the Race Dropdown */
 #root.dark-mode .position-race-select .ant-select-selection-item {
@@ -168,4 +173,33 @@
 /* Tags */
 #root.dark-mode span.ant-tag, #root.dark-mode .tag-display-field span.anticon {
     color: var(--black);
+}
+
+#root.dark-mode input, #root.dark-mode .ant-input-number{
+    border:var(--bright-blue) solid 1px;
+}
+
+#root.dark-mode .ant-input-number {
+    background-color: var(--input-background); 
+}
+
+#root.dark-mode input, #root.dark-mode textarea {
+    background-color: var(--bright-blue);
+    color: var(--dark-toolbar);
+}
+
+#root.dark-mode .ant-input-number-input-wrap input {
+    border-radius: 0px;
+}
+
+#root.dark-mode .extra-navinfo-textarea {
+    border: var(--bright-blue) solid 1px;
+    border-radius: 9px;
+}
+
+#root.dark-mode .ant-input-number-handler-wrap {
+    background-color: var(--input-background);
+}
+#root.dark-mode .tag-display-field span.anticon {
+    color: white;
 }

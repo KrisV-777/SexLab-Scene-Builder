@@ -112,6 +112,9 @@ h5 {
   padding-top: 6px;
   padding-bottom: 6px;
 }
+.scene-box .ant-card-body {
+  height: 92%;
+}
 
 .site-layout {
   height: 100vh;
@@ -184,7 +187,7 @@ h5 {
 }
 
 .graph-furniture-selection {
-  width: 256px;
+  width: 100%;
 }
 
 .sidebar-form {
@@ -207,4 +210,16 @@ h5 {
   border: 0;
   height: 2px;
   background-image: linear-gradient(to right, transparent, #CCC, transparent);
+}
+
+#sceneTags-panel {
+  padding: 10px;
+}
+
+#scenePositions .ant-card-body{
+  height: 100%;
+  overflow: auto;
+}
+.sceneTagsPositions-card {
+  height: 100%;
 }

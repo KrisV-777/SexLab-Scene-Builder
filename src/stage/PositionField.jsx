@@ -1,12 +1,9 @@
-import React, { useState, forwardRef, useImperativeHandle, useEffect } from "react";
+import React, { useState } from "react";
 import { Button, Card, Checkbox, Col, Input, Row, Select, Space, Tooltip, InputNumber, Dropdown } from "antd";
-import { readTextFile, readDir } from "@tauri-apps/api/fs";
-import { resourceDir } from '@tauri-apps/api/path';
-import { invoke } from "@tauri-apps/api";
-import { useImmer } from "use-immer";
+import RaceSelect from "../components/RaceSelect";
 import './PositionField.css'
 
-const StripOptions = [
+const stripOptions = [
   "Default",
   "Everything",
   "Nothing",
@@ -14,120 +11,34 @@ const StripOptions = [
   "Gloves",
   "Boots",
 ];
-const getStrips = (list) => {
-  let ret = [];
-  for (const [key, value] of Object.entries(list)) {
-    if (!value)
-      continue;
-
-    switch (key) {
-      case 'default':
-        ret.push(StripOptions[0]);
-        break;
-      case 'everything':
-        ret.push(StripOptions[1]);
-        break;
-      case 'nothing':
-        ret.push(StripOptions[2]);
-        break;
-      case 'helmet':
-        ret.push(StripOptions[3]);
-        break;
-      case 'gloves':
-        ret.push(StripOptions[4]);
-        break;
-      case 'boots:':
-        ret.push(StripOptions[5]);
-        break;
-    }
-  }
-  return ret.length ? ret : [StripOptions[0]];
+const stripKeyMap = {
+  default: "Default",
+  everything: "Everything",
+  nothing: "Nothing",
+  helmet: "Helmet",
+  gloves: "Gloves",
+  boots: "Boots",
 };
-const makeStrips = (list) => {
-  return {
-    default: list.includes(StripOptions[0]),
-    everything: list.includes(StripOptions[1]),
-    nothing: list.includes(StripOptions[2]),
-    helmet: list.includes(StripOptions[3]),
-    gloves: list.includes(StripOptions[4]),
-    boots: list.includes(StripOptions[5]),
-  }
+const uniqueOptionIndex = 3
+
+const getStrips = (list = {}) => {
+  const ret = Object.entries(stripKeyMap)
+    .filter(([key]) => list[key])
+    .map(([, label]) => label);
+  return ret.length ? ret : [stripOptions[0]];
 };
 
-const readExtraOptions = async () => {
-  try {
-    const resourceDirPath = (await resourceDir()) + "User\\Position";
-    const entries = await readDir(resourceDirPath, { recursive: false })
-    let ret = [];
-    for (const entry of entries) {
-      const file = await readTextFile(entry.path);
-      const list = file.split(/[,\s]+/);
-      ret = list.filter((value, i) => {
-        if (!value) return false;
-        const upperV = value.toUpperCase();
-        return ret.findIndex(it => it.value.toUpperCase() === upperV) === -1 &&
-          list.findIndex(it => it.toUpperCase() === upperV) === i
-      })
-        .map(value => { return { value: value, label: value }; })
-        .concat(ret);
-    }
-    // console.log(ret);
-    return ret;
-  } catch (error) {
-    console.log(error);
-    return [];
-  }
+const makeStrips = (list = []) => {
+  const lowerList = list.map(String);
+  return Object.fromEntries(
+    Object.entries(stripKeyMap).map(([key, label]) => [key, lowerList.includes(label)])
+  );
 };
-const PositionField = forwardRef(function PositionField({ _position, _control }, ref) {
-  const [event, updateEvent] = useImmer(_position.event);
-  const [race, setRace] = useState(_control && _control.race || _position.race);
-  const [sex, updateSex] = useImmer(_control && _control.sex || _position.sex);
-  const [extra, updateExtra] = useImmer(_control && _control.extra ? { ..._control.extra, climax: _position.extra.climax } : _position.extra);
-  const [offset, updateOffset] = useImmer(_control && _control.offset || _position.offset);
-  const [scale, setScale] = useState(_control && _control.scale || _position.scale);
-  const [anim_obj, setAnimObj] = useState(_position.anim_obj);
-  const [strips, updateStrips] = useImmer(getStrips(_control && _control.strip_data || _position.strip_data))
-  const [extraOptions, setExtraOptions] = useState([]);
-  const [raceKeys, setRaceKeys] = useState([]);
+
+function PositionField({ position, info, onChange }) {
   const [basicAnim, setBasicAnim] = useState(true);
   const [workingAnim, setWorkingAnim] = useState(undefined);
   const [sequenceOpen, setSequenceOpen] = useState(false);
-  const [schlong, setSchlong] = useState(_position.schlong);
-
-  useEffect(() => {
-    invoke('get_race_keys').then(result => setRaceKeys(result));
-    readExtraOptions().then(result => setExtraOptions(result));
-  }, []);
-
-  useImperativeHandle(ref, () => {
-    return {
-      getData() {
-        return {
-          event,
-          race,
-          sex,
-          scale,
-          extra,
-          offset,
-          anim_obj,
-          schlong,
-          strip_data: makeStrips(strips),
-        };
-      }
-    };
-  });
-
-  function CheckboxEx({ obj, label, disabled, attr, updateFunc }) {
-    return (
-      <Checkbox
-        onChange={(e) => { updateFunc(prev => { prev[attr] = e.target.checked }) }}
-        checked={obj[attr] && !disabled}
-        disabled={disabled || false}
-      >
-        {label}
-      </Checkbox>
-    );
-  }
 
   const makeSequenceMenu = (events) => {
     let sequences = [];
@@ -138,12 +49,12 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
           <Input
             addonAfter={'.hkx'}
             addonBefore={'+'}
-            value={event[i]}
+            value={position.event[i]}
             onChange={(e) => {
-              updateEvent((prev) => {
-                if (!e.target.value) prev.splice(i, 1);
-                else prev[i] = e.target.value;
-              });
+              let evt = [...position.event];
+              if (!e.target.value) evt.splice(i, 1);
+              else evt[i] = e.target.value;
+              onChange({ ...position, event: evt }, info);
             }}
           />
         ),
@@ -161,20 +72,16 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
               setWorkingAnim(e.target.value);
             }}
             placeholder="New Behavior File"
-            onPressEnter={() =>
-              updateEvent((prev) => {
-                prev.push(workingAnim);
-                setWorkingAnim(undefined);
-              })
-            }
+            onPressEnter={() => {
+              onChange({ ...position, event: [...workingAnim, workingAnim] }, info);
+              setWorkingAnim(undefined);
+            }}
           />
           <Button
-            onClick={() =>
-              updateEvent((prev) => {
-                prev.push(workingAnim);
-                setWorkingAnim(undefined);
-              })
-            }
+            onClick={() => {
+              onChange({ ...position, event: [...workingAnim, workingAnim] }, info);
+              setWorkingAnim(undefined);
+            }}
           >
             Add
           </Button>
@@ -187,35 +94,17 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
   return (
     <div>
       <Row gutter={[2, 2]}>
-        <Col span={8}>
-          {/* Race */}
+        <Col span={8}> {/* Race */}
           <Card className="position-attribute-card" title={'Race'}>
-            <Select
-              className="position-race-select"
-              defaultValue={race}
-              disabled={!!_control}
-              showSearch
-              placeholder="Position race"
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                (option?.label ?? '').includes(input)
-              }
-              filterSort={(optionA, optionB) =>
-                (optionA?.label ?? '')
-                  .toLowerCase()
-                  .localeCompare((optionB?.label ?? '').toLowerCase())
-              }
-              options={raceKeys.map((race, i) => {
-                return { value: race, label: race };
-              })}
+            <RaceSelect
+              race={info.race}
               onSelect={(e) => {
-                setRace(e);
+                onChange(position, { ...info, race: e, sex: { ...info.sex, futa: e === 'Human' && info.sex.futa } });
               }}
             />
           </Card>
         </Col>
-        <Col span={8}>
-          {/* Sex */}
+        <Col span={9}> {/* Sex */}
           <Card
             className="position-attribute-card"
             title={'Sex'}
@@ -229,31 +118,21 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
               </Tooltip>
             }
           >
-            <Space size={'large'}>
-              <CheckboxEx
-                obj={sex}
-                label={'Male'}
-                attr={'male'}
-                updateFunc={updateSex}
-              />
-              <CheckboxEx
-                obj={sex}
-                label={'Female'}
-                attr={'female'}
-                updateFunc={updateSex}
-              />
-              <CheckboxEx
-                obj={sex}
-                label={'Futa'}
-                disabled={race !== 'Human'}
-                attr={'futa'}
-                updateFunc={updateSex}
-              />
+            <Space size={'large'} wrap={true}>
+              {['male', 'female', 'futa'].map(attr => (
+                <Checkbox
+                  key={attr}
+                  onChange={e => onChange(position, { ...info, sex: { ...info.sex, [attr]: e.target.checked, } })}
+                  disabled={attr === 'futa' && info.race !== 'Human'}
+                  checked={info.sex[attr]}
+                >
+                  {attr.charAt(0).toUpperCase() + attr.slice(1)}
+                </Checkbox>
+              ))}
             </Space>
           </Card>
         </Col>
-        <Col span={8}>
-          {/* behavior file */}
+        <Col span={24}>  {/* Animation (Basic) */}
           <Card
             className="position-attribute-card"
             title={
@@ -277,9 +156,9 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
             {basicAnim ? (
               <Input
                 addonAfter={'.hkx'}
-                value={event[0]}
+                value={position.event[0]}
                 onChange={(e) => {
-                  updateEvent([e.target.value]);
+                  onChange({ ...position, event: [e.target.value] }, info)
                 }}
                 placeholder="Behavior file"
               />
@@ -287,7 +166,7 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
               <Dropdown
                 menu={{
                   overlayClassName: 'test12334',
-                  items: makeSequenceMenu(event),
+                  items: makeSequenceMenu(position.event),
                 }}
                 onOpenChange={(open) => setSequenceOpen(open)}
                 open={sequenceOpen}
@@ -295,11 +174,9 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
                 <Input
                   addonBefore={'s'}
                   addonAfter={'.hkx'}
-                  value={event[0]}
+                  value={position.event[0]}
                   onChange={(e) => {
-                    updateEvent((prev) => {
-                      prev[0] = e.target.value;
-                    });
+                    onChange({ ...position, event: [e.target.value, ...position.event.slice(1)] }, info)
                   }}
                   placeholder="Behavior file"
                 />
@@ -307,8 +184,31 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
             )}
           </Card>
         </Col>
-        <Col span={12}>
-          {/* Data */}
+        <Col span={24}> {/* Anim Object */}
+          {/* behavior file */}
+          <Card
+            className="position-attribute-card"
+            title={'Anim Object'}
+            extra={
+              <Tooltip className="tool-tip"
+                title={
+                  'The anim object/s associated with this position. If multiple, separate with commas (,)'
+                }
+              >
+                <Button type="link">Info</Button>
+              </Tooltip>
+            }
+          >
+            <Input
+              value={position.anim_obj}
+              onChange={(e) => {
+                onChange({ ...position, anim_obj: [e.target.value] }, info)
+              }}
+              placeholder="Editor ID"
+            />
+          </Card>
+        </Col>
+        <Col xs={12} lg={12} xl={6}> {/* Data */}
           <Card
             className="position-attribute-card"
             title={'Data'}
@@ -322,89 +222,64 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
               </Tooltip>
             }
           >
-            {/* div here is necessary to avoid 'findDOMNode is depreciated' error */}
             <Row gutter={[8, 16]} justify={'space-between'}>
-              <Col>
-                <Tooltip title={'Passive/Taker/Bottom position.'}>
-                  <div>
-                    <CheckboxEx
-                      obj={extra}
-                      label={'Submissive'}
-                      attr={'submissive'}
-                      updateFunc={updateExtra}
-                    />
-                  </div>
-                </Tooltip>
-              </Col>
+              {[
+                { attr: 'submissive', title: 'Passive/Taker/Bottom position.' },
+                { attr: 'vampire', title: 'Actor is a vampire.' },
+                { attr: 'dead', title: 'Actor is unconscious/dead.' },
+              ].map(({ attr, title }) => (
+                <Col key={attr}>
+                  <Tooltip title={title}>
+                    {/* div here is necessary to avoid 'findDOMNode is depreciated' error */}
+                    <div>
+                      <Checkbox
+                        onChange={e => onChange(
+                          position,
+                          { ...info, [attr]: e.target.checked }
+                        )}
+                        checked={info[attr]}
+                      >
+                        {attr.charAt(0).toUpperCase() + attr.slice(1)}
+                      </Checkbox>
+                    </div>
+                  </Tooltip>
+                </Col>
+              ))}
               <Col>
                 <Tooltip className="tool-tip" title={'Actor climaxes during this stage.'}>
                   <div>
                     <Checkbox
-                      checked={extra.climax}
-                      onChange={(e) => {
-                        updateExtra((prev) => {
-                          prev.climax = e.target.checked;
-                        });
-                      }}
+                      checked={position.climax}
+                      onChange={(e) => onChange({ ...position, climax: e.target.checked }, info)}
                     >
                       Climax
                     </Checkbox>
                   </div>
                 </Tooltip>
               </Col>
-              <Col>
-                <Tooltip className="tool-tip" title={'Actor is a vampire.'}>
-                  <div>
-                    <CheckboxEx
-                      obj={extra}
-                      label={'Vampire'}
-                      attr={'vampire'}
-                      disabled={race !== 'Human'}
-                      updateFunc={updateExtra}
-                    />
-                  </div>
-                </Tooltip>
-              </Col>
-              <Col>
-                <Tooltip className="tool-tip" title={'Actor is unconscious/dead.'}>
-                  <div>
-                    <CheckboxEx
-                      obj={extra}
-                      label={'Unconscious'}
-                      attr={'dead'}
-                      updateFunc={updateExtra}
-                    />
-                  </div>
-                </Tooltip>
-              </Col>
               <Select
                 mode="tags"
                 style={{ width: '100%' }}
-                value={extra.custom ? extra.custom : undefined}
-                placeholder="Custom Extra"
+                value={position.tags ? position.tags : undefined}
+                placeholder="Tags"
                 onSelect={(value) => {
                   const upperV = value.toUpperCase();
-                  const idx = extra.custom.findIndex(it => it.toUpperCase() === upperV);
+                  const idx = position.tags.findIndex(it => it.toUpperCase() === upperV);
                   if (idx === -1) {
-                    updateExtra(prev => { prev.custom.push(value); });
+                    onChange({ ...position, tags: [...(position.tags || []), value] }, info);
                   }
                 }}
                 onDeselect={(value) => {
                   const upperV = value.toUpperCase();
-                  const idx = extra.custom.findIndex(it => it.toUpperCase() === upperV);
-                  if (idx > -1) {
-                    updateExtra(prev => { prev.custom.splice(idx, 1); });
-                  }
+                  onChange({ ...position, tags: position.tags.filter(it => it.toUpperCase() !== upperV) }, info);
                 }}
-                options={extraOptions}
                 maxTagTextLength={10}
                 maxTagCount={3}
               />
             </Row>
           </Card>
         </Col>
-        <Col span={12}>
-          {/* Offset */}
+        <Col xs={12} lg={12} xl={6}> {/* Offset */}
           <Card
             className="position-attribute-card"
             title={'Offset'}
@@ -417,76 +292,27 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
             }
           >
             <Row gutter={[12, 12]}>
-              <Col span={12}>
-                <InputNumber
-                  addonBefore={'X'}
-                  controls
-                  decimalSeparator=","
-                  precision={1}
-                  step={0.1}
-                  value={offset.x ? offset.x : undefined}
-                  onChange={(e) => {
-                    updateOffset((prev) => {
-                      prev.x = e ? e : 0.0;
-                    });
-                  }}
-                  placeholder="0.0"
-                />
-              </Col>
-              <Col span={12}>
-                <InputNumber
-                  addonBefore={'Y'}
-                  controls
-                  decimalSeparator=","
-                  precision={1}
-                  step={0.1}
-                  value={offset.y ? offset.y : undefined}
-                  onChange={(e) => {
-                    updateOffset((prev) => {
-                      prev.y = e ? e : 0.0;
-                    });
-                  }}
-                  placeholder="0.0"
-                />
-              </Col>
-              <Col span={12}>
-                <InputNumber
-                  addonBefore={'Z'}
-                  controls
-                  decimalSeparator=","
-                  precision={1}
-                  step={0.1}
-                  value={offset.z ? offset.z : undefined}
-                  onChange={(e) => {
-                    updateOffset((prev) => {
-                      prev.z = e ? e : 0.0;
-                    });
-                  }}
-                  placeholder="0.0"
-                />
-              </Col>
-              <Col span={12}>
-                <InputNumber
-                  addonBefore={'°'}
-                  controls
-                  decimalSeparator=","
-                  precision={1}
-                  step={0.1}
-                  min={0.0}
-                  max={359.9}
-                  value={offset.r ? offset.r : undefined}
-                  onChange={(e) => {
-                    updateOffset((prev) => {
-                      prev.r = e ? e : 0.0;
-                    });
-                  }}
-                  placeholder="0.0"
-                />
-              </Col>
+              {['x', 'y', 'z', 'r'].map((axis, index) => (
+                <Col span={12} key={index}>
+                  <InputNumber
+                    addonBefore={axis.toUpperCase()}
+                    controls
+                    decimalSeparator=","
+                    precision={1}
+                    step={0.1}
+                    value={position.offset[axis] ? position.offset[axis] : undefined}
+                    onChange={(e) => {
+                      onChange({ ...position, offset: { ...position.offset, [axis]: e ? e : 0.0 } }, info);
+                    }}
+                    placeholder="0.0"
+                    min={axis === 'r' ? 0.0 : undefined}
+                    max={axis === 'r' ? 359.9 : undefined}
+                  />
+                </Col>))}
             </Row>
           </Card>
         </Col>
-        <Col span={8}>
+        <Col xs={12} lg={12} xl={6}> {/* Scale */}
           <Card
             className="position-attribute-card"
             title={'Scale'}
@@ -508,15 +334,15 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
               min={0.01}
               max={2}
               step={0.01}
-              value={scale}
+              value={info.scale}
               onChange={(e) => {
-                setScale(e);
+                onChange(position, { ...info, scale: e });
               }}
               placeholder="1.0"
             />
           </Card>
         </Col>
-        <Col span={8}>
+        <Col xs={12} lg={12} xl={6}> {/* Stripping */}
           <Card
             className="position-attribute-card"
             title={'Stripping'}
@@ -531,109 +357,48 @@ const PositionField = forwardRef(function PositionField({ _position, _control },
             <Select
               className="position-strip-tree"
               mode="multiple"
-              value={strips}
+              value={getStrips(position.strip_data)}
               options={[
                 {
                   label: 'Unique',
                   options: [
-                    { label: StripOptions[0], value: StripOptions[0] },
-                    { label: StripOptions[1], value: StripOptions[1] },
-                    { label: StripOptions[2], value: StripOptions[2] },
+                    { label: stripOptions[0], value: stripOptions[0] },
+                    { label: stripOptions[1], value: stripOptions[1] },
+                    { label: stripOptions[2], value: stripOptions[2] },
                   ],
                 },
                 {
                   label: 'Multiple',
                   options: [
-                    { label: StripOptions[3], value: StripOptions[3] },
-                    { label: StripOptions[4], value: StripOptions[4] },
-                    { label: StripOptions[5], value: StripOptions[5] },
+                    { label: stripOptions[3], value: stripOptions[3] },
+                    { label: stripOptions[4], value: stripOptions[4] },
+                    { label: stripOptions[5], value: stripOptions[5] },
                   ],
                 },
               ]}
               maxTagTextLength={7}
-              maxTagCount={2}
+              maxTagCount={3}
               onSelect={(value) => {
-                if (StripOptions.indexOf(value) < 3) {
-                  updateStrips([value]);
+                if (stripOptions.indexOf(value) < uniqueOptionIndex) {
+                  onChange({ ...position, strip_data: makeStrips([value]) }, info);
                 } else {
-                  updateStrips((prev) => {
-                    let where = -1;
-                    for (let i = 0; i < 3 && where === -1; i++) {
-                      where = prev.indexOf(StripOptions[i]);
-                    }
-                    if (where === -1) prev.push(value);
-                    else prev[where] = value;
-                  });
+                  const strips = getStrips(position.strip_data);
+                  if (stripOptions.some((v, i) => i < uniqueOptionIndex && strips.includes(v)))
+                    onChange({ ...position, strip_data: makeStrips([value]) }, info);
+                  else
+                    onChange({ ...position, strip_data: makeStrips([...strips, value]) }, info);
                 }
               }}
               onDeselect={(value) => {
-                updateStrips((prev) => {
-                  prev = prev.filter((it) => it !== value);
-                  if (prev.length === 0) {
-                    prev = [StripOptions[0]];
-                  }
-                  return prev;
-                });
+                let newValue = makeStrips(getStrips(position.strip_data).filter((it) => it !== value));
+                onChange({ ...position, strip_data: newValue.length ? newValue : [stripOptions[0]] }, info);
               }}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          {/* behavior file */}
-          <Card
-            className="position-attribute-card"
-            title={'Anim Object'}
-            extra={
-              <Tooltip className="tool-tip"
-                title={
-                  'The anim object/s associated with this position. If multiple, separate with commas (,)'
-                }
-              >
-                <Button type="link">Info</Button>
-              </Tooltip>
-            }
-          >
-            <Input
-              value={anim_obj}
-              onChange={(e) => {
-                setAnimObj(e.target.value);
-              }}
-              placeholder="Editor ID"
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card
-            className="position-attribute-card"
-            title={'Schlong'}
-            extra={
-              <Tooltip
-                className="tool-tip"
-                title={'The angle of this actors schlong. Only used for Male and Futa actors.'}
-              >
-                <Button type="link">Info</Button>
-              </Tooltip>
-            }
-          >
-            <InputNumber
-              addonBefore={'S'}
-              controls
-              decimalSeparator=","
-              precision={0}
-              min={-9}
-              max={9}
-              step={1}
-              value={schlong}
-              onChange={(e) => {
-                setSchlong(e);
-              }}
-              placeholder="0"
             />
           </Card>
         </Col>
       </Row>
-    </div>
+    </div >
   );
-});
+};
 
 export default PositionField;

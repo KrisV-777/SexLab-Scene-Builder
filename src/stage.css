@@ -5,6 +5,7 @@
 body {
   padding: 0;
   margin: 0;
+  background: #f5f5f5;
 }
 
 /**
@@ -91,13 +92,16 @@ body {
 }
 
 /* Tag Field */
+.tag-display-box {
+  width: 100%;
+  padding: 25px;
+}
 
 .tag-display-field {
   /* border: 2px hsla(232, 18%, 16%, 0.1) solid; */
   /* border-radius: 16px; */
   background-color: #FFF;
-
-  margin: 24px;
+  width: 100%;
   margin-top: 0px;
   /* padding: 18px; */
   /* min-height: 52px; */
@@ -151,4 +155,14 @@ ul[overlayclassname="test12334"] {
     padding-top: 5px;
     margin-top: 5px;
     align-items: flex-start;
+}
+.ant-col {
+  padding: 5px !important;
+}
+
+.ant-input-number-group-wrapper {
+  width: 100%;
+}
+.ant-collapse {
+  margin-top: 10px;
 }

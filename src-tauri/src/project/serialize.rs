@@ -1,36 +1,5 @@
-use std::mem::size_of;
-
-use serde::{Deserialize, Serialize};
-
-pub trait EncodeBinary {
-    fn get_byte_size(&self) -> usize;
-    fn write_byte(&self, buf: &mut Vec<u8>) -> ();
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub struct Offset {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub r: f32,
-}
-
-impl EncodeBinary for Offset {
-    fn get_byte_size(&self) -> usize {
-        size_of::<Offset>()
-    }
-
-    fn write_byte(&self, buf: &mut Vec<u8>) -> () {
-        let x_ = (self.x * 1000.0).round() as i32;
-        buf.extend_from_slice(&x_.to_be_bytes());
-        let y_ = (self.y * 1000.0).round() as i32;
-        buf.extend_from_slice(&y_.to_be_bytes());
-        let z_ = (self.z * 1000.0).round() as i32;
-        buf.extend_from_slice(&z_.to_be_bytes());
-        let r_ = (self.r * 1000.0).round() as i32;
-        buf.extend_from_slice(&r_.to_be_bytes());
-    }
-}
+use serde::{Deserializer, de::{self}};
+use std::{collections::HashMap, fmt, vec};
 
 pub fn map_race_to_folder(race: &str) -> Result<String, ()> {
     match race {
@@ -81,6 +50,39 @@ pub fn map_race_to_folder(race: &str) -> Result<String, ()> {
         "Wisp" => Ok("witchlight".into()),
         _ => Err(()),
     }
+}
+
+pub struct DeserializeVecOrString;
+impl<'de> de::Visitor<'de> for DeserializeVecOrString {
+    type Value = Vec<String>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a vector or a string")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: de::SeqAccess<'de>,
+    {
+        let mut ret = Vec::new();
+        while let Some(data) = seq.next_element()? {
+            ret.push(data);
+        }
+        Ok(ret)
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(vec![v.to_string()])
+    }
+}
+pub fn deserialize_vec_or_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_any(DeserializeVecOrString)
 }
 
 pub fn make_fnis_lines(
@@ -142,3 +144,104 @@ fn make_fnis_line(
             .fold(String::from(""), |acc, x| format!("{} {}", acc, x))
     )
 }
+
+pub trait EncodeBinary {
+    fn get_byte_size(&self) -> usize;
+    fn write_byte(&self, buf: &mut Vec<u8>) -> ();
+}
+
+impl EncodeBinary for String {
+    fn get_byte_size(&self) -> usize {
+        size_of::<u32>() + self.len() // u32 for length + string bytes
+    }
+
+    fn write_byte(&self, buf: &mut Vec<u8>) -> () {
+        let len = self.len() as u32;
+        buf.extend_from_slice(&len.to_be_bytes());
+        buf.extend_from_slice(self.as_bytes());
+    }
+}
+
+impl EncodeBinary for f32 {
+    fn get_byte_size(&self) -> usize {
+        size_of::<f32>()
+    }
+
+    fn write_byte(&self, buf: &mut Vec<u8>) -> () {
+      let scaled_value = (self * 1000.0).round() as i32;
+      buf.extend_from_slice(&scaled_value.to_be_bytes());
+    }
+}
+
+impl EncodeBinary for bool {
+    fn get_byte_size(&self) -> usize {
+        size_of::<bool>()
+    }
+
+    fn write_byte(&self, buf: &mut Vec<u8>) -> () {
+        buf.push(*self as u8);
+    }
+}
+
+impl EncodeBinary for u8 {
+    fn get_byte_size(&self) -> usize {
+        size_of::<u8>()
+    }
+
+    fn write_byte(&self, buf: &mut Vec<u8>) -> () {
+        buf.push(*self);
+    }
+}
+
+impl EncodeBinary for u32 {
+    fn get_byte_size(&self) -> usize {
+        size_of::<u32>()
+    }
+
+    fn write_byte(&self, buf: &mut Vec<u8>) -> () {
+        buf.extend_from_slice(&self.to_be_bytes());
+    }
+}
+
+impl EncodeBinary for u64 {
+    fn get_byte_size(&self) -> usize {
+        size_of::<u64>()
+    }
+
+    fn write_byte(&self, buf: &mut Vec<u8>) -> () {
+        buf.extend_from_slice(&self.to_be_bytes());
+    }
+}
+
+impl<T: EncodeBinary> EncodeBinary for Vec<T> {
+    fn get_byte_size(&self) -> usize {
+        size_of::<u32>() + self.iter().map(|item| item.get_byte_size()).sum::<usize>()
+    }
+
+    fn write_byte(&self, buf: &mut Vec<u8>) -> () {
+        let len = self.len() as u32;
+        buf.extend_from_slice(&len.to_be_bytes());
+        for item in self {
+            item.write_byte(buf);
+        }
+    }
+}
+
+impl<K: EncodeBinary, V: EncodeBinary> EncodeBinary for HashMap<K, V> {
+    fn get_byte_size(&self) -> usize {
+        size_of::<u32>() + 
+        self.iter()
+            .map(|(key, value)| key.get_byte_size() + value.get_byte_size())
+            .sum::<usize>()
+    }
+
+    fn write_byte(&self, buf: &mut Vec<u8>) -> () {
+        let len = self.len() as u32;
+        buf.extend_from_slice(&len.to_be_bytes());
+        for (key, value) in self {
+            key.write_byte(buf);
+            value.write_byte(buf);
+        }
+    }
+}
+

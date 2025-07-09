@@ -2,65 +2,32 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist",
-    "withGlobalTauri": false
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420"
   },
-  "package": {
-    "productName": "SexLab Scene Builder",
-    "version": "1.5.3"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "all": false,
-        "open": true
-      },
-      "dialog": {
-        "all": true,
-        "ask": true,
-        "confirm": true,
-        "message": true,
-        "open": true,
-        "save": true
-      },
-      "fs": {
-        "all": true,
-        "scope": [
-          "$APP/*",
-          "$RESOURCE",
-          "$RESOURCE/*",
-          "$RESOURCE/**"
-        ]
-      },
-      "path": {
-        "all": true
-      }
-    },
-    "bundle": {
-      "active": true,
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "category": "DeveloperTool",
-      "copyright": "Copyright Scrab 2023. All rights reserved.",
-      "identifier": "com.SexLabSceneBuilder.dev",
+  "bundle": {
+    "active": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "DeveloperTool",
+    "copyright": "Copyright Scrab 2023. All rights reserved.",
+    "targets": "all",
+    "linux": {
       "appimage": {
         "bundleMediaFramework": false
-      },
-      "targets": "all"
-    },
-    "security": {
-      "csp": null
-    },
-    "updater": {
-      "active": false
-    },
+      }
+    }
+  },
+  "productName": "SexLab Scene Builder",
+  "mainBinaryName": "SexLab Scene Builder",
+  "version": "1.5.3",
+  "identifier": "com.SexLabSceneBuilder.dev",
+  "plugins": {
     "cli": {
       "description": "CLI for SLSB",
       "longDescription": "Can convert and serialize traditional SLAL packs to SLSB.",
@@ -94,6 +61,12 @@
           ]
         }
       }
+    }
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "security": {
+      "csp": null
     }
   }
 }

@@ -3,8 +3,8 @@
   padding: 6px;
 }
 
-.position-race-select {
-  width: 180px;
+.position-race-select, .position-schlong-input {
+  width: 100%;
   text-align: left;
 }
 

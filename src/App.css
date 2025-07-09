@@ -218,6 +218,11 @@ h3, h4, h5 { font-size: 1.2em; }
   align-items: center; 
   box-sizing: border-box;
 }
+.scene-positions-list .ant-card-body > div > .ant-space-item:nth-of-type(2),
+.scene-positions-list .ant-card-body > div > .ant-space-item:nth-of-type(4) {
+  background-color: #f0f0f0;
+  width: 2px;
+}
 /* add warpping to main window postion area at smaller size to prevent side scrolling */
 @media (max-width: 1205px) {
   .scene-positions-list .ant-card-body > div{

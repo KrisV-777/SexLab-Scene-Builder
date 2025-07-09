@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useImmer } from "use-immer";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { listen, emit } from "@tauri-apps/api/event";
 import { Graph, Shape } from '@antv/x6'
 import { History } from "@antv/x6-plugin-history";
 import { Menu, Layout, Card, Input, Space, Button, Empty, Modal, Tooltip, notification, Divider, Switch, Checkbox, Row, Col, InputNumber, Select } from 'antd'
@@ -300,8 +300,9 @@ function App() {
       }
     });
     const position_change = listen('on_position_change', (event) => {
-      const { sceneId, _, positionIdx, info } = event.payload;
-      // NOTE: Skip position change if the scene is not currently active
+      const { sceneId, stageId, positionIdx, info } = event.payload;
+      if (stageId === 0) return // invoked by ScenePosition, skip
+      // Skip position change if the scene is not currently active
       // If the stage of an inactive scene is saved, the info will be updated accordingly
       if (scenes.length === 0 || activeScene.id === sceneId) {
         updateActiveScene(draft => {
@@ -1056,6 +1057,12 @@ function App() {
                           onChange={(newPos) => {
                             updateActiveScene(draft => {
                               draft.positions[idx] = { ...newPos, id: pos.id || generatePositionId() };
+                            });
+                            emit('on_position_change', {
+                              sceneId: activeScene.id,
+                              stageId: 0,
+                              positionIdx: idx,
+                              info: { ...newPos }
                             });
                             setEdited(true);
                           }}

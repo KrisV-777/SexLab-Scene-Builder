@@ -1044,7 +1044,7 @@ function App() {
                 minSize={15}
                 maxSize={50}
                 id="scenePositions"
-                style={{ minHeight: "150px", maxHeight: "225px" }}
+                style={{ minHeight: "150px", maxHeight: "450px" }}
                 defaultSize={100}
               >
                 <Card
@@ -1060,7 +1060,8 @@ function App() {
                     </Tooltip>
                   }
                 >
-                  <Space direction="vertical" style={{ width: "100%" }}>
+                  <Space  
+                    direction="horizontal"style={{ width: "100%" }}>
                     <div className="scene-positions-list">
                       {activeScene && activeScene.positions.map((pos, idx) => (
                         <Col key={pos.id || idx} span={24}>
@@ -1082,7 +1083,7 @@ function App() {
                         </Col>
                       ))}
                     </div>
-                  </Space>
+                  </Space >
                 </Card>
               </Panel>
               {/* Bottom Positions Field */}

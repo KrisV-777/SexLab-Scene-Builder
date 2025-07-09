@@ -195,15 +195,32 @@ h3, h4, h5 { font-size: 1.2em; }
   height: calc(100% - 56px);
   overflow: auto;
 }
+.scene-positions-list {
+  display: flex;
+  flex-wrap: wrap;
+}
+.scene-positions-list .ant-col {
+  flex: 1 1 50%;
+  min-width: 850px;
+  box-sizing: border-box;
+  padding: .5em;
+}
 
 .scene-positions-list .ant-card-body > div {
   display: flex;
+  flex-wrap: nowrap;
   flex-direction: row;
   align-items: center;
-  justify-content: center;
+  gap: .5em;
 }
 
 .scene-positions-list .ant-card-body > div .ant-space-item {
-  display: flex;
   align-items: center; 
+  box-sizing: border-box;
+}
+/* add warpping to main window postion area at smaller size to prevent side scrolling */
+@media (max-width: 1205px) {
+  .scene-positions-list .ant-card-body > div{
+    flex-wrap: wrap;
+  }
 }

@@ -4,16 +4,20 @@ import { invoke } from "@tauri-apps/api/core"
 import ReactDOM from "react-dom/client";
 import { useImmer } from "use-immer";
 import { AlipaySquareFilled, FileDoneOutlined, TagsOutlined, SaveOutlined, TeamOutlined } from '@ant-design/icons';
-import { Input, Button, Tag, Space, Tooltip, InputNumber, Card, Layout, Divider, Menu, Row, Col, Tabs, TreeSelect, notification, Collapse } from 'antd';
+import { Input, Button, Tag, Space, Tooltip, InputNumber, Card, Layout, Divider, Menu, Row, Col, Tabs, TreeSelect, notification, Collapse, ConfigProvider, theme } from 'antd';
 
 import { tagsSFW, tagsNSFW } from "./common/Tags"
 import PositionField from "./stage/PositionField";
 import TagTree from "./components/TagTree";
 import "./stage.css";
-import "./Dark.css";
+import "./App.css";
+// import "./Dark.css";
 
 const { Header } = Layout;
 const { TextArea } = Input;
+
+// New Dark Mode State
+
 
 let root = null;
 document.addEventListener('DOMContentLoaded', async () => {
@@ -51,6 +55,7 @@ function makePositionTab(p, i) {
 }
 
 function Editor({ _sceneId, _stage, _positions }) {
+  const [isDark, setIsDark] = useState(false);
   const [api, contextHolder] = notification.useNotification();
 
   const [name, setName] = useState(_stage.name);
@@ -62,24 +67,15 @@ function Editor({ _sceneId, _stage, _positions }) {
   const [navText, setNavText] = useState(_stage.extra.nav_text);
 
   useEffect(() => {
-    const toggleDarkMode = (toEnabled) => {
-      const root = document.getElementById('root');
-
-      if (toEnabled) {
-        root.classList.add('dark-mode');
-      } else {
-        root.classList.remove('dark-mode');
-      }
-    }
-
-    invoke('get_in_darkmode').then(ret => toggleDarkMode(ret));
+    // Listen for the toggle_darkmode event from Tauri
     const unlisten = listen('toggle_darkmode', (event) => {
-      toggleDarkMode(event.payload);
+      setIsDark(event.payload); // event.payload should be true or false
     });
-    return () => {
-      unlisten.then(res => { res() });
-    }
+    // Optionally, get initial dark mode state from backend
+    invoke('get_in_darkmode').then(setIsDark);
+    return () => { unlisten.then(f => f()); };
   }, []);
+
 
   useEffect(() => {
     const position_remove = listen('on_position_remove', (event) => {
@@ -286,53 +282,68 @@ function Editor({ _sceneId, _stage, _positions }) {
   ]
 
   return (
-    <Layout>
-      {contextHolder}
-      <Header className="stage-header">
-        <Row>
-          <Col>
-            <Input
-              id="stage-namefield-input"
-              className="stage-namefield"
-              size="large"
-              maxLength={30}
-              bordered={false}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              defaultValue={_stage.name}
-              placeholder={'Stage Name'}
-              onFocus={(e) => e.target.select()}
-            />
-          </Col>
-          <Col flex={'auto'}>
-            <Menu
-              className="stage-header-menu"
-              theme="dark"
-              mode="horizontal"
-              selectable={false}
-              defaultSelectedKeys={['save']}
-              onClick={({ key }) => {
-                switch (key) {
-                  case 'save':
-                    saveAndReturn();
-                    break;
-                }
-              }}
-              items={[
-                { type: 'divider' },
-                {
-                  label: 'Save',
-                  key: 'save',
-                  icon: <SaveOutlined />,
-                  className: 'stage-header-menu-entry',
-                },
-              ]}
-            />
-          </Col>
-        </Row>
-      </Header>
-      <Collapse items={positionsCollapsed} defaultActiveKey={['1', '2', '3']} />;
-    </Layout>
+    <ConfigProvider
+      theme={{
+      algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+      token: isDark
+        ? {
+          //Dark Mode Color Overrides
+          colorBgBase: '#001529',
+        }
+      : {
+        // Light Mode Color Overrides
+      }
+
+    }}
+    >
+      <Layout>
+        {contextHolder}
+        <Header className="stage-header">
+          <Row>
+            <Col>
+              <Input
+                id="stage-namefield-input"
+                className="stage-namefield"
+                size="large"
+                maxLength={30}
+                bordered={false}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                defaultValue={_stage.name}
+                placeholder={'Stage Name'}
+                onFocus={(e) => e.target.select()}
+              />
+            </Col>
+            <Col flex={'auto'}>
+              <Menu
+                className="stage-header-menu"
+                theme={isDark ? "dark" : "light"}
+                mode="horizontal"
+                selectable={false}
+                defaultSelectedKeys={['save']}
+                onClick={({ key }) => {
+                  switch (key) {
+                    case 'save':
+                      saveAndReturn();
+                      break;
+                  }
+                }}
+                items={[
+                  { type: 'divider' },
+                  {
+                    label: 'Save',
+                    key: 'save',
+                    icon: <SaveOutlined />,
+                    className: 'stage-header-menu-entry',
+                  },
+                ]}
+              />
+            </Col>
+          </Row>
+        </Header>
+        <Collapse items={positionsCollapsed} defaultActiveKey={['1', '2', '3']} />
+      </Layout>
+    </ConfigProvider>
   )
 }
 

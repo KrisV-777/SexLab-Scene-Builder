@@ -13,15 +13,22 @@
   --dark-text: rgba(255, 255, 255, 0.65);
   --dark-toolbar: #f5f5f5;
   --placeholder: rgb(233, 184, 184);
+  background: var(--dark-background);
+}
+.test {
+  background-color: #444
 }
 
 body {
-  background-color: #222431;
-  color: white;
-  padding: 0;
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
   margin: 0;
-  font-size: .9em;
+  padding: 0;
+  min-height: 100vh;
+  min-width: 100vw;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-size: 1em;
+  line-height: 1.5;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
 }
 
 h1 {
@@ -29,28 +36,6 @@ h1 {
   border-image: linear-gradient(to right, #445fef, #00008b00) 1;
   font-weight: lighter;
 }
-
-/* button { */
-/* padding: .5em; */
-/* border-radius: 1em; */
-/* font-weight: bold; */
-/* color: white; */
-/* background-color: #445fef; */
-/* border: 1px solid #445eef; */
-/* width: 80%; */
-/* cursor: pointer; */
-/* margin: 1em; */
-/* align-self: center; */
-/* } */
-/* button:hover { */
-/* background-color: #445eef7e; */
-/* border: 1px solid #445eef7e; */
-/* } */
-
-/* button { */
-/* box-shadow: none; */
-/* remove box shadow */
-/* } */
 
 [type="checkbox"],
 [type="radio"] {
@@ -65,10 +50,6 @@ label {
   cursor: pointer;
 }
 
-input:focus::-webkit-input-placeholder {
-  color: #d3d3d3;
-}
-
 h1,
 h2,
 h3,
@@ -77,72 +58,61 @@ h5 {
   font-family: 'Lucida Console', 'Courier New', Courier, monospace;
 }
 
-h1 {
-  font-size: 1.5em;
-}
+h1 { font-size: 1.5em; }
+h2 { font-size: 1.4em; }
+h3, h4, h5 { font-size: 1.2em; }
 
-h2 {
-  font-size: 1.4em;
-}
-
-h3.h4,
-h5 {
-  font-size: 1.2em;
-}
-
+/* Hide duplicate Graph probably not needed but leaving here incase*/
 .x6-graph-grid:first-of-type {
   display: none;
 }
 
+/* fix position issue for stage insertion */
+.x6-node foreignObject > body {
+  display: contents;
+}
+
+/* Set defaults */
+.ant-card-body{
+  display: flex;
+  flex-direction: column;
+}
 
 /* Main Window (Left side) */
-
 .main-sider {
   overflow: auto;
-  /* 48px = Height of collide button on sider */
-  height: calc(100vh);
+  height: 100vh;
   left: 0;
   top: 0;
   bottom: 0;
 }
 
 /* Main Window (Right side) */
-
 .scene-box {
-  padding-top: 6px;
-  padding-bottom: 6px;
+  padding: 0.5em;
 }
 .scene-box .ant-card-body {
-  height: 92%;
-}
-
-.site-layout {
-  height: 100vh;
+  height: calc(100% - 56px);
 }
 
 #stageNameInputField {
-  margin-right: 5%;
+  margin-right: 0.5em;
 }
 
 .graph-editor-field {
-  height: 100%;
-  width: 100%;
   border: 0px;
 }
 .graph-toolbox, .graph-container, .graph-data-field {
-  width: 100%;
-  margin: 5px;
+  margin: 0.5em;
 }
 
 .graph-toolbox {
-  height: 36px;
-  background-color: #F9F9F9;
-  border-radius: 5px;
-  border-color: hsla(232, 18%, 16%, 0.1);
+  height: 2.5em;
+  border-radius: 0.5em;
   border-style: solid;
-  padding: 2px;
-  padding-left: 16px;
-  padding-right: 16px;
+  padding: 0.25em;
+  padding-left: 1em;
+  padding-right: 1em;
 }
 
 .graph-toolbox-content {
@@ -151,31 +121,37 @@ h5 {
 
 .graph-toolbox-content .ant-space-item {
   display: flex;
-  align-content: center;
 }
-.ant-card-body{
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 70px);
+
+#sceneTags-panel {
+  height: 100%;
+}
+
+.sceneTags-attribute-card, .furniture-attribute-card {
+  margin: .5em;
+}
+.furniture-attribute-card{
+  height: calc(100% - 56px);
+}
+
+#sceneTags-panel .ant-card-body{
+   height: calc(100% - 164px);
+   overflow: auto;
 }
 
 .graph-container {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
 }
 
 #graph {
   flex: 1;
-  background-color: #F9F9F9;
   border-radius: 5px;
-  border-color: hsla(232, 18%, 16%, 0.1);
   border-style: solid;
 }
 
 .graph-data-field {
-  background-color: #F9F9F9;
   border-radius: 5px;
-  border-color: hsla(232, 18%, 16%, 0.1);
   border-style: solid;
 }
 
@@ -196,30 +172,38 @@ h5 {
   line-height: 1.5;
   margin-top: 16px;
   margin-left: 16px;
-  color: var(--white);
-  background-color: var(--input-background);
   width: calc(100% - 36px);
   border: none !important;
 }
 .sidebar-form:focus{
-  border: 2px solid white;
+  border: 2px solid;
 }
 #sidebar-divider {
-  /* color: white; */
-  /* background: white; */
   border: 0;
   height: 2px;
   background-image: linear-gradient(to right, transparent, #CCC, transparent);
 }
-
-#sceneTags-panel {
-  padding: 10px;
+#scenePositions{
+  height: 100%;
+}
+.sceneTagsPositions-card {
+  height: calc(100% - 1em);
+  margin: 0.5em;  
 }
 
 #scenePositions .ant-card-body{
-  height: 100%;
+  height: calc(100% - 56px);
   overflow: auto;
 }
-.sceneTagsPositions-card {
-  height: 100%;
+
+.scene-positions-list .ant-card-body > div {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.scene-positions-list .ant-card-body > div .ant-space-item {
+  display: flex;
+  align-items: center; 
 }

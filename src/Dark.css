@@ -1,6 +1,6 @@
 :root {
-    --dark-background: rgb(0 33 64);
-    --dark-background-alt: rgb(27 61 93);
+    --dark-background: rgb(0, 20, 39);
+    --dark-background-alt: rgb(240, 244, 248);
     --dark-text: rgba(255, 255, 255, 0.65);
     --bright-blue: #1677ff;
     --input-background: rgba(255, 255, 255, 0.2);

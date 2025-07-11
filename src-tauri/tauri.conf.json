@@ -25,7 +25,7 @@
   },
   "productName": "SexLab Scene Builder",
   "mainBinaryName": "SexLab Scene Builder",
-  "version": "1.5.3",
+  "version": "2.0.0",
   "identifier": "com.SexLabSceneBuilder.dev",
   "plugins": {
     "cli": {

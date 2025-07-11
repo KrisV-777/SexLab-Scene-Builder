@@ -38,6 +38,18 @@ function App() {
   const [activeScene, updateActiveScene] = useImmer(null);
   const [edited, setEdited] = useState(0);
   const inEdit = useRef(0);
+  const [showAreas, setShowAreas] = useState(false);
+
+  // Hide Areas when sidebar is collapsed
+  useEffect(() => {
+    let unlisten;
+    listen('on_project_update', () => setShowAreas(false)).then((fn) => {
+      unlisten = fn;
+    });
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, []);
 
   function generatePositionId() {
     return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -542,9 +554,11 @@ function App() {
       case 'add':
         const new_anim = await invoke('create_blank_scene');
         setActiveScene(new_anim);
+        setShowAreas(true);
         break;
       case 'editanim':
         setActiveScene(scene);
+        setShowAreas(true);
         break;
       case 'delanim':
         {
@@ -580,17 +594,15 @@ function App() {
         algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: isDark
           ? {
-            //Dark Mode Color Overrides
-            colorBgBase: '#001529'
-          }
+              //Dark Mode Color Overrides
+              colorBgBase: '#001529',
+            }
           : {
-            // Light Mode Color Overrides
-          }
-
+              // Light Mode Color Overrides
+            },
       }}
     >
       <Layout hasSider>
-
         <PanelGroup direction="horizontal">
           {/* Left Panel */}
           <Panel minSize={10} defaultSize={15} maxSize={50} id="left-panel">
@@ -616,7 +628,7 @@ function App() {
                 />
                 <Divider id="sidebar-divider" />
                 <Menu
-                  theme={"dark"}
+                  theme={'dark'}
                   mode="inline"
                   selectable={false}
                   items={sideBarMenu}
@@ -635,27 +647,34 @@ function App() {
                 <PanelGroup direction="horizontal">
                   {/* Graph Area */}
                   <Panel id="graph-panel">
-                    <Layout style={{ height: "100%" }}>
+                    <Layout style={{ height: '100%' }}>
                       <Content>
                         {/* hacky workaround because graph doesnt render nodes if I put the graph interface into a child component zzz */}
                         {/* if (activeScene) ... */}
                         <div
                           className="scene-box"
-                          style={{ display: !activeScene ? "none" : undefined }}
+                          style={{ display: !activeScene ? 'none' : undefined }}
                         >
                           <Card
                             className="graph-editor-field a"
                             style={{
-                              height: "100%",
+                              height: '100%',
                             }}
                             title={
                               activeScene ? (
-                                <Space.Compact style={{ width: "98%" }}>
+                                <Space.Compact style={{ width: '98%' }}>
                                   <div
-                                    style={edited < 1 ? { display: "none" } : {}}
+                                    style={
+                                      edited < 1 ? { display: 'none' } : {}
+                                    }
                                   >
-                                    <Tooltip title={"Unsaved changes"}>
-                                      <DiffOutlined style={{ fontSize: '2em', color: 'red' }} />
+                                    <Tooltip title={'Unsaved changes'}>
+                                      <DiffOutlined
+                                        style={{
+                                          fontSize: '2em',
+                                          color: 'red',
+                                        }}
+                                      />
                                     </Tooltip>
                                   </div>
                                   <Input
@@ -682,7 +701,7 @@ function App() {
                               <Space.Compact block>
                                 <Button
                                   onClick={() => {
-                                    invoke("open_stage_editor", {
+                                    invoke('open_stage_editor', {
                                       activeScene: activeScene,
                                       stage: null,
                                     });
@@ -695,12 +714,12 @@ function App() {
                                 </Button>
                               </Space.Compact>
                             }
-                          // bodyStyle={{ height: 'calc(100% - 190px)' }}
+                            // bodyStyle={{ height: 'calc(100% - 190px)' }}
                           >
                             <div className="graph-toolbox">
                               <Space
                                 className="graph-toolbox-content"
-                                size={"small"}
+                                size={'small'}
                                 align="center"
                               >
                                 <Tooltip title="Undo" mouseEnterDelay={0.5}>
@@ -808,14 +827,14 @@ function App() {
                         </div>
                         {/* else ... */}
                         <Empty
-                          style={activeScene ? { display: "none" } : {}}
+                          style={activeScene ? { display: 'none' } : {}}
                           className="graph-no-scene-placeholder"
                           image={Empty.PRESENTED_IMAGE_SIMPLE}
-                          description={"No scene loaded :("}
+                          description={'No scene loaded :('}
                         >
                           <Button
                             type="primary"
-                            onClick={() => onSiderSelect({ key: "add" })}
+                            onClick={() => onSiderSelect({ key: 'add' })}
                           >
                             New Scene
                           </Button>
@@ -827,265 +846,280 @@ function App() {
                   {/* End Graph Area */}
 
                   <PanelResizeHandle className="resize-handle" />
-
-                  <Panel
-                    id="sceneTags-panel"
-                    minSize={30}
-                    defaultSize={30}
-                    maxSize={40}
-                  >
-                    <Card
-                      className="sceneTags-attribute-card"
-                      bordered={false}
-                      title={"Scene Tags"}
-                      extra={
-                        <Tooltip
-                          className="tool-tip"
-                          title={"Tags which are shared between all stages in the scene."}
-                        >
-                          <Button type="link">Info</Button>
-                        </Tooltip>
-                      }
+                  {/* Scene Tags and Furniture area */}
+                  {showAreas && (
+                    <Panel
+                      id="sceneTags-panel"
+                      minSize={30}
+                      defaultSize={30}
+                      maxSize={40}
                     >
-                      <TagTree
-                        tags={activeScene ? activeScene.tags : []}
-                        onChange={(tags) => {
-                          updateActiveScene((prev) => {
-                            prev.tags = tags;
-                          });
-                          setEdited(true);
-                        }}
-                        tagsSFW={activeScene ? tagsSFW : []}
-                        tagsNSFW={activeScene ? tagsNSFW : []}
-                      />
-                    </Card>
-                    <Card
-                      bordered={false}
-                      title={"Furniture"}
-                      className="furniture-attribute-card"
-                      extra={
-                        <Tooltip
-                          className="tool-tip"
-                          title={"Furniture settings for the scene."}
-                        >
-                          <Button type="link">Info</Button>
-                        </Tooltip>
-                      }
-                    >
-                      <Space size={"large"} direction="vertical">
-                        <Select
-                          style={{ overflowY: "auto" }}
-                          className="graph-furniture-selection"
-                          value={
-                            activeScene ? activeScene.furniture.furni_types : []
-                          }
-                          options={Furnitures}
-                          mode="multiple"
-                          onSelect={(value) => {
-                            if (value === "None") {
-                              updateActiveScene((prev) => {
-                                prev.furniture.furni_types = [value];
-                                return prev;
-                              });
-                            } else {
-                              updateActiveScene((prev) => {
-                                let where =
-                                  prev.furniture.furni_types.indexOf("None");
-                                if (where === -1)
-                                  prev.furniture.furni_types.push(value);
-                                else prev.furniture.furni_types[where] = value;
-                                prev.furniture.allow_bed = false;
-                                return prev;
-                              });
+                      <Card
+                        className="sceneTags-attribute-card"
+                        bordered={false}
+                        title={'Scene Tags'}
+                        extra={
+                          <Tooltip
+                            className="tool-tip"
+                            title={
+                              'Tags which are shared between all stages in the scene.'
                             }
-                            setEdited(true);
-                          }}
-                          onDeselect={(value) => {
+                          >
+                            <Button type="link">Info</Button>
+                          </Tooltip>
+                        }
+                      >
+                        <TagTree
+                          tags={activeScene ? activeScene.tags : []}
+                          onChange={(tags) => {
                             updateActiveScene((prev) => {
-                              prev.furniture.furni_types =
-                                prev.furniture.furni_types.filter(
-                                  (it) => it !== value
-                                );
-                              if (prev.furniture.furni_types.length === 0) {
-                                prev.furniture.furni_types = ["None"];
-                              }
-                              return prev;
+                              prev.tags = tags;
                             });
                             setEdited(true);
                           }}
+                          tagsSFW={activeScene ? tagsSFW : []}
+                          tagsNSFW={activeScene ? tagsNSFW : []}
                         />
-                        <Checkbox
-                          onChange={(e) => {
-                            updateActiveScene((prev) => {
-                              prev.furniture.allow_bed = e.target.checked;
-                            });
-                            setEdited(true);
-                          }}
-                          checked={activeScene && activeScene.furniture.allow_bed}
-                          disabled={
-                            activeScene &&
-                            !activeScene.furniture.furni_types.includes("None")
-                          }
-                        >
-                          Allow Bed
-                        </Checkbox>
-                        <Checkbox
-                          onChange={(e) => {
-                            updateActiveScene((prev) => {
-                              prev.private = e.target.checked;
-                            });
-                            setEdited(true);
-                          }}
-                          checked={activeScene && activeScene.private}
-                        >
-                          Private
-                        </Checkbox>
-                        <Row gutter={[12, 12]} justify={"space-evenly"}>
-                          <Col>
-                            <InputNumber
-                              addonBefore={"X"}
-                              controls
-                              decimalSeparator=","
-                              precision={1}
-                              step={0.1}
-                              value={
-                                activeScene
-                                  ? activeScene.furniture.offset.x
+                      </Card>
+                      <Card
+                        bordered={false}
+                        title={'Furniture'}
+                        className="furniture-attribute-card"
+                        extra={
+                          <Tooltip
+                            className="tool-tip"
+                            title={'Furniture settings for the scene.'}
+                          >
+                            <Button type="link">Info</Button>
+                          </Tooltip>
+                        }
+                      >
+                        <Space size={'large'} direction="vertical">
+                          <Select
+                            style={{ overflowY: 'auto' }}
+                            className="graph-furniture-selection"
+                            value={
+                              activeScene ? activeScene.furniture.furni_types : []
+                            }
+                            options={Furnitures}
+                            mode="multiple"
+                            onSelect={(value) => {
+                              if (value === 'None') {
+                                updateActiveScene((prev) => {
+                                  prev.furniture.furni_types = [value];
+                                  return prev;
+                                });
+                              } else {
+                                updateActiveScene((prev) => {
+                                  let where =
+                                    prev.furniture.furni_types.indexOf('None');
+                                  if (where === -1)
+                                    prev.furniture.furni_types.push(value);
+                                  else prev.furniture.furni_types[where] = value;
+                                  prev.furniture.allow_bed = false;
+                                  return prev;
+                                });
+                              }
+                              setEdited(true);
+                            }}
+                            onDeselect={(value) => {
+                              updateActiveScene((prev) => {
+                                prev.furniture.furni_types =
+                                  prev.furniture.furni_types.filter(
+                                    (it) => it !== value
+                                  );
+                                if (prev.furniture.furni_types.length === 0) {
+                                  prev.furniture.furni_types = ['None'];
+                                }
+                                return prev;
+                              });
+                              setEdited(true);
+                            }}
+                          />
+                          <Checkbox
+                            onChange={(e) => {
+                              updateActiveScene((prev) => {
+                                prev.furniture.allow_bed = e.target.checked;
+                              });
+                              setEdited(true);
+                            }}
+                            checked={
+                              activeScene && activeScene.furniture.allow_bed
+                            }
+                            disabled={
+                              activeScene &&
+                              !activeScene.furniture.furni_types.includes('None')
+                            }
+                          >
+                            Allow Bed
+                          </Checkbox>
+                          <Checkbox
+                            onChange={(e) => {
+                              updateActiveScene((prev) => {
+                                prev.private = e.target.checked;
+                              });
+                              setEdited(true);
+                            }}
+                            checked={activeScene && activeScene.private}
+                          >
+                            Private
+                          </Checkbox>
+                          <Row gutter={[12, 12]} justify={'space-evenly'}>
+                            <Col>
+                              <InputNumber
+                                addonBefore={'X'}
+                                controls
+                                decimalSeparator=","
+                                precision={1}
+                                step={0.1}
+                                value={
+                                  activeScene
                                     ? activeScene.furniture.offset.x
+                                      ? activeScene.furniture.offset.x
+                                      : undefined
                                     : undefined
-                                  : undefined
-                              }
-                              onChange={(e) => {
-                                updateActiveScene((prev) => {
-                                  prev.furniture.offset.x = e;
-                                });
-                                setEdited(true);
-                              }}
-                              placeholder="0.0"
-                            />
-                          </Col>
-                          <Col>
-                            <InputNumber
-                              addonBefore={"Y"}
-                              controls
-                              decimalSeparator=","
-                              precision={1}
-                              step={0.1}
-                              value={
-                                activeScene && activeScene.furniture.offset.y
-                                  ? activeScene.furniture.offset.y
-                                  : undefined
-                              }
-                              onChange={(e) => {
-                                updateActiveScene((prev) => {
-                                  prev.furniture.offset.y = e;
-                                });
-                                setEdited(true);
-                              }}
-                              placeholder="0.0"
-                            />
-                          </Col>
-                          <Col>
-                            <InputNumber
-                              addonBefore={"Z"}
-                              controls
-                              decimalSeparator=","
-                              precision={1}
-                              step={0.1}
-                              value={
-                                activeScene
-                                  ? activeScene.furniture.offset.z
+                                }
+                                onChange={(e) => {
+                                  updateActiveScene((prev) => {
+                                    prev.furniture.offset.x = e;
+                                  });
+                                  setEdited(true);
+                                }}
+                                placeholder="0.0"
+                              />
+                            </Col>
+                            <Col>
+                              <InputNumber
+                                addonBefore={'Y'}
+                                controls
+                                decimalSeparator=","
+                                precision={1}
+                                step={0.1}
+                                value={
+                                  activeScene && activeScene.furniture.offset.y
+                                    ? activeScene.furniture.offset.y
+                                    : undefined
+                                }
+                                onChange={(e) => {
+                                  updateActiveScene((prev) => {
+                                    prev.furniture.offset.y = e;
+                                  });
+                                  setEdited(true);
+                                }}
+                                placeholder="0.0"
+                              />
+                            </Col>
+                            <Col>
+                              <InputNumber
+                                addonBefore={'Z'}
+                                controls
+                                decimalSeparator=","
+                                precision={1}
+                                step={0.1}
+                                value={
+                                  activeScene
                                     ? activeScene.furniture.offset.z
+                                      ? activeScene.furniture.offset.z
+                                      : undefined
                                     : undefined
-                                  : undefined
-                              }
-                              onChange={(e) => {
-                                updateActiveScene((prev) => {
-                                  prev.furniture.offset.z = e;
-                                });
-                                setEdited(true);
-                              }}
-                              placeholder="0.0"
-                            />
-                          </Col>
-                          <Col>
-                            <InputNumber
-                              addonBefore={"°"}
-                              controls
-                              decimalSeparator=","
-                              precision={1}
-                              step={0.1}
-                              min={0.0}
-                              max={359.9}
-                              value={
-                                (activeScene && activeScene.furniture.offset.r) ||
-                                undefined
-                              }
-                              onChange={(e) => {
-                                updateActiveScene((prev) => {
-                                  prev.furniture.offset.r = e;
-                                });
-                                setEdited(true);
-                              }}
-                              placeholder="0.0"
-                            />
-                          </Col>
-                        </Row>
-                      </Space>
-                    </Card>
-                  </Panel>
+                                }
+                                onChange={(e) => {
+                                  updateActiveScene((prev) => {
+                                    prev.furniture.offset.z = e;
+                                  });
+                                  setEdited(true);
+                                }}
+                                placeholder="0.0"
+                              />
+                            </Col>
+                            <Col>
+                              <InputNumber
+                                addonBefore={'°'}
+                                controls
+                                decimalSeparator=","
+                                precision={1}
+                                step={0.1}
+                                min={0.0}
+                                max={359.9}
+                                value={
+                                  (activeScene &&
+                                    activeScene.furniture.offset.r) ||
+                                  undefined
+                                }
+                                onChange={(e) => {
+                                  updateActiveScene((prev) => {
+                                    prev.furniture.offset.r = e;
+                                  });
+                                  setEdited(true);
+                                }}
+                                placeholder="0.0"
+                              />
+                            </Col>
+                          </Row>
+                        </Space>
+                      </Card>
+                    </Panel>
+                  )}
+                  {/* Scene Tags and Furniture area */}
                 </PanelGroup>
               </Panel>
 
               <PanelResizeHandle className="resize-handle-horizontal" />
 
               {/* Bottom Positions Field */}
-              <Panel
-                minSize={15}
-                maxSize={50}
-                id="scenePositions"
-                style={{ minHeight: "150px", maxHeight: "450px" }}
-                defaultSize={100}
-              >
-                <Card
-                  className="sceneTagsPositions-card"
-                  bordered={false}
-                  title="Scene Positions"
-                  extra={
-                    <Tooltip
-                      className="tool-tip"
-                      title={"Position Date shared between all stages in the scene."}
-                    >
-                      <Button type="link">Info</Button>
-                    </Tooltip>
-                  }
+              {showAreas && (
+                <Panel
+                  minSize={15}
+                  maxSize={50}
+                  id="scenePositions"
+                  style={{ minHeight: '150px', maxHeight: '450px' }}
+                  defaultSize={100}
                 >
-                  <Space  
-                    direction="horizontal"style={{ width: "100%" }}>
-                    <div className="scene-positions-list">
-                      {activeScene && activeScene.positions.map((pos, idx) => (
-                        <Col key={pos.id || idx} span={24}>
-                          <ScenePosition
-                            position={pos}
-                            onChange={(newPos) => {
-                              updateActiveScene(draft => {
-                                draft.positions[idx] = { ...newPos, id: pos.id || generatePositionId() };
-                              });
-                              emit('on_position_change', {
-                                sceneId: activeScene.id,
-                                stageId: 0,
-                                positionIdx: idx,
-                                info: { ...newPos }
-                              });
-                              setEdited(true);
-                            }}
-                          />
-                        </Col>
-                      ))}
-                    </div>
-                  </Space >
-                </Card>
-              </Panel>
+                  <Card
+                    className="sceneTagsPositions-card"
+                    bordered={false}
+                    title="Scene Positions"
+                    extra={
+                      <Tooltip
+                        className="tool-tip"
+                        title={
+                          'Position Date shared between all stages in the scene.'
+                        }
+                      >
+                        <Button type="link">Info</Button>
+                      </Tooltip>
+                    }
+                  >
+                    <Space direction="horizontal" style={{ width: '100%' }}>
+                      <div className="scene-positions-list">
+                        {activeScene &&
+                          activeScene.positions.map((pos, idx) => (
+                            <Col key={pos.id || idx} span={24}>
+                              <ScenePosition
+                                position={pos}
+                                onChange={(newPos) => {
+                                  updateActiveScene((draft) => {
+                                    draft.positions[idx] = {
+                                      ...newPos,
+                                      id: pos.id || generatePositionId(),
+                                    };
+                                  });
+                                  emit('on_position_change', {
+                                    sceneId: activeScene.id,
+                                    stageId: 0,
+                                    positionIdx: idx,
+                                    info: { ...newPos },
+                                  });
+                                  setEdited(true);
+                                }}
+                              />
+                            </Col>
+                          ))}
+                      </div>
+                    </Space>
+                  </Card>
+                </Panel>
+              )}
               {/* Bottom Positions Field */}
             </PanelGroup>
           </Panel>
